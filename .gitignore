@@ -1,1 +1,22 @@
-/target/
+# macOS
+.DS_Store
+
+# Maven
+target/
+
+# NetBeans
+nbproject/private/
+
+# IDE
+.idea/
+.vscode/
+
+# Environment variables / API keys
+.env
+.env.local
+application.properties
+config.properties
+secrets.properties
+
+# Java
+*.class
