@@ -9,11 +9,15 @@ import java.sql.Timestamp;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import java.awt.Dimension;
+import javax.swing.*;
 import java.time.LocalDateTime;
 import javax.swing.JTextField;
 import javax.swing.JOptionPane;
+import javax.swing.SwingWorker;
+import javax.swing.JLabel;
 import java.util.List;
 import java.util.ArrayList;
+import java.awt.Image;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
@@ -52,13 +56,51 @@ public class NewsFrame extends JFrame {
             });
         }
         JTable table = new JTable(model);
-        // Gomb
-        JButton button = new JButton("Refresh");
-        button.addActionListener(e -> {
-            RssReader reader = new RssReader();
-            reader.testFeed(); // uj adatok lekerdezese 
-            loadArticles();
-            System.out.println("Feed refreshed");
+        // Refresh Gomb
+        // Loading animation
+        ImageIcon originalIcon =
+        new ImageIcon(getClass().getResource("/loading.gif"));
+        
+        Image scaledImage = // loading gif meretezese
+        originalIcon.getImage().getScaledInstance(
+                32, 32, Image.SCALE_DEFAULT);
+
+        ImageIcon loadingIcon = new ImageIcon(scaledImage);
+
+        JLabel loadingLabel = new JLabel(loadingIcon);
+        
+        loadingLabel.setVisible(false);
+        //refresh
+        JButton refreshButton = new JButton("Refresh");
+        refreshButton.addActionListener(e -> {
+
+            loadingLabel.setVisible(true);
+
+            SwingWorker<Void, Void> worker = new SwingWorker<>() {
+
+                @Override
+                protected Void doInBackground() throws Exception {
+
+                    RssReader reader = new RssReader();
+                    reader.testFeed();
+
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+
+                    loadArticles();
+                    loadingLabel.setVisible(false);
+
+                    JOptionPane.showMessageDialog(
+                            NewsFrame.this,
+                            "Refresh completed!"
+                    );
+                }
+            };
+
+            worker.execute();
         });
         
         // Delete button
@@ -185,17 +227,19 @@ public class NewsFrame extends JFrame {
             }
         });
         
-                
+        
+
         // Search function
         JPanel topPanel = new JPanel();
         JTextField searchField = new JTextField(20);
         JButton searchButton = new JButton("Search");
-
+        
+        topPanel.add(loadingLabel);
         topPanel.add(searchField);
         topPanel.add(editButton);
         topPanel.add(deleteButton);
         topPanel.add(searchButton);
-        topPanel.add(button);
+        topPanel.add(refreshButton);
         add(topPanel, BorderLayout.NORTH);
         
         // Search button action listener
