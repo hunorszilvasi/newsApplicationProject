@@ -112,4 +112,33 @@ public class ArticleDao {
         }
             
     }
+    // kereso bar
+    public List<Article> searchByTitle(String keyword){
+        List<Article> articles = new ArrayList<>();
+        // visszaadja az osszes olyan talalatot amire rakeresett a user
+        String sql = "SELECT * FROM articles WHERE title LIKE ?";
+        try(Connection conn = DatabaseManager.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.setString(1, "%" + keyword + "%");
+            ResultSet rs = pstmt.executeQuery();
+            while(rs.next()){
+                Article article = new Article();
+
+                article.setId(rs.getInt("id"));
+                article.setTitle(rs.getString("title"));
+                article.setAuthor(rs.getString("author"));
+                article.setSource(rs.getString("source"));
+                article.setUrl(rs.getString("url"));
+                article.setPublishDate(rs.getTimestamp("publish_date"));
+                article.setCreatedAt(rs.getTimestamp("created_at"));
+                article.setLastModifiedAt(rs.getTimestamp("last_modified_at"));
+
+                articles.add(article);
+            }
+            
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+        return articles;
+    }
 }

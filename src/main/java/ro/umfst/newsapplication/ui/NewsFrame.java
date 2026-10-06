@@ -8,7 +8,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import java.awt.Dimension;
-
+import javax.swing.JTextField;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JPanel;
@@ -40,16 +40,44 @@ public class NewsFrame extends JFrame {
             });
         }
         JTable table = new JTable(model);
+        // Gomb
         JButton button = new JButton("Refresh");
-        add(button, BorderLayout.NORTH);
         button.addActionListener(e -> {
             RssReader reader = new RssReader();
             reader.testFeed(); // uj adatok lekerdezese 
             loadArticles();
             System.out.println("Feed refreshed");
         });
-        add(new JScrollPane(table));
+        // Search function
+        JPanel topPanel = new JPanel();
+        JTextField searchField = new JTextField(20);
+        JButton searchButton = new JButton("Search");
 
+        topPanel.add(searchField);
+        topPanel.add(searchButton);
+        topPanel.add(button);
+        add(topPanel, BorderLayout.NORTH);
+        
+        // Search button action listener
+        searchButton.addActionListener(e -> {
+            String keyword = searchField.getText();
+            List<Article> searchResults = dao.searchByTitle(keyword);
+            model.setRowCount(0);
+            for(Article article : searchResults){
+            model.addRow(new Object[]{
+                article.getId(),
+                article.getSource(),
+                article.getAuthor(),
+                article.getTitle(),
+                article.getUrl(),
+                article.getPublishDate()
+            });
+        }
+            
+        });
+        
+        
+        add(new JScrollPane(table));
         setVisible(true);
     }
     
