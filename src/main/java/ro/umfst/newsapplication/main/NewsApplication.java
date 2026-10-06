@@ -1,8 +1,6 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- */
-
 package ro.umfst.newsapplication.main;
+
+import ro.umfst.newsapplication.ui.NewsFrame;
 import ro.umfst.newsapplication.dao.ArticleDao;
 import ro.umfst.newsapplication.model.*;
 import ro.umfst.newsapplication.service.*;
@@ -24,6 +22,7 @@ public class NewsApplication {
     public static void main(String[] args) {
         RssReader reader = new RssReader();
         reader.testFeed();
+        new NewsFrame();
 //        ArticleDao dao = new ArticleDao();
 //        List<Article> articles = dao.findAll();
 //

@@ -31,7 +31,7 @@ public class DatabaseManager {
              Statement stmt = conn.createStatement()) {
 
             stmt.execute(sql);
-            System.out.println("Articles table created successfully.");
+            System.out.println("Database initialized successfully.");
 
         } catch (SQLException e) {
             e.printStackTrace();

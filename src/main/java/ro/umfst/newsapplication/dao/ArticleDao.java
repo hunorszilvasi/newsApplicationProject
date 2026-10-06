@@ -11,7 +11,7 @@ public class ArticleDao {
 
     
     // egy article lementese
-    public void save(Article article) {
+    public int save(Article article) {
 
         String sql = """
                 INSERT OR IGNORE INTO articles
@@ -32,10 +32,11 @@ public class ArticleDao {
 
             pstmt.executeUpdate();
 
-            System.out.println("Article saved successfully.");
+            return pstmt.executeUpdate();
 
         } catch (SQLException e) {
             e.printStackTrace();
+            return -1;
         }
     }
     // Article listazasa
