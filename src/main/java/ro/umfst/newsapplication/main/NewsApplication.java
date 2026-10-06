@@ -23,13 +23,7 @@ public class NewsApplication {
         RssReader reader = new RssReader();
         reader.testFeed();
         new NewsFrame();
-//        ArticleDao dao = new ArticleDao();
-//        List<Article> articles = dao.findAll();
-//
-//        for (Article article1 : articles) {
-//            System.out.println(article1);
-//        }
-//        
+  
         
     }
 }

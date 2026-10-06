@@ -71,7 +71,7 @@ public class ArticleDao {
                 PreparedStatement pstmt = conn.prepareStatement(sql)){    
             pstmt.setInt(1, id);
             pstmt.executeUpdate();
-            System.out.println("Article deleted successfully.");
+            System.out.println("Article deleted successfully, id: " + id);
             
         } catch(SQLException e){
             e.printStackTrace();
