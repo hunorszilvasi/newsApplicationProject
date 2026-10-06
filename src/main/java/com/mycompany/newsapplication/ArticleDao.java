@@ -13,7 +13,7 @@ public class ArticleDao {
     public void save(Article article) {
 
         String sql = """
-                INSERT INTO articles
+                INSERT OR IGNORE INTO articles
                 (title, author, source, url, publish_date, created_at, last_modified_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """;
@@ -75,5 +75,40 @@ public class ArticleDao {
         } catch(SQLException e){
             e.printStackTrace();
         }
+    }
+    
+    // Article modositas
+    public void updateArticle(Article article){
+        String sql = """
+            UPDATE articles
+            SET title = ?,
+                author = ?,
+                source = ?,
+                url = ?,
+                publish_date = ?,
+                created_at = ?,
+                last_modified_at = ?
+            WHERE id = ?
+            """;
+        try(Connection conn = DatabaseManager.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)){
+            
+            pstmt.setString(1, article.getTitle());
+            pstmt.setString(2, article.getAuthor());
+            pstmt.setString(3, article.getSource());
+            pstmt.setString(4, article.getUrl());
+            pstmt.setString(5, article.getPublishDate());
+            pstmt.setString(6, article.getCreatedAt());
+            pstmt.setString(7, article.getLastModifiedAt());
+            pstmt.setInt(8, article.getId());
+
+            pstmt.executeUpdate();
+
+            System.out.println("Article updated successfully.");
+            
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+            
     }
 }

@@ -14,24 +14,13 @@ import java.util.ArrayList;
 public class NewsApplication {
 
     public static void main(String[] args) {
-        System.out.println("Hello World!");
-        DatabaseManager.initializeDatabase();
-        Article article = new Article();
-
-        article.setTitle("Test News");
-        article.setAuthor("Hunor");
-        article.setSource("BBC");
-        article.setUrl("https://example.com/news2");
-        article.setPublishDate("2026-10-05");
-        article.setCreatedAt("2026-10-05");
-        article.setLastModifiedAt("2026-10-05");
-
+        RssReader reader = new RssReader();
+        reader.testFeed();
         ArticleDao dao = new ArticleDao();
-        dao.save(article);
         List<Article> articles = dao.findAll();
 
         for (Article article1 : articles) {
-            System.out.println(article);
+            System.out.println(article1);
         }
     }
 }
