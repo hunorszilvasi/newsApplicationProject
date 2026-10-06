@@ -20,3 +20,5 @@ secrets.properties
 
 # Java
 *.class
+
+news.db
