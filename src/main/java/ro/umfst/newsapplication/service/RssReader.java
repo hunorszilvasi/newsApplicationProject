@@ -6,12 +6,14 @@ import com.rometools.rome.io.FeedException;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 import ro.umfst.newsapplication.dao.ArticleDao;
+import java.sql.Timestamp;
 import ro.umfst.newsapplication.dao.DatabaseManager;
 import ro.umfst.newsapplication.model.Article;
-
+import ro.umfst.newsapplication.model.RssSource;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 import java.time.LocalDateTime;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -19,30 +21,11 @@ import java.util.logging.Logger;
 public class RssReader {
 
     private static final Logger LOGGER = Logger.getLogger(RssReader.class.getName());
-    private static final String RSS_URL = "https://marosvasarhelyi.info/feed";
-
+    RSSSourceLoader loader = new RSSSourceLoader(); 
+    List<RssSource> sources = loader.loadSources(); // betoltsuk a sourceokat
+     
     public void testFeed() {
-        SyndFeed feed;
 
-        // feed letoltese es exceptions
-        try {
-            URL url = new URL(RSS_URL);
-            feed = new SyndFeedInput().build(new XmlReader(url));
-        } catch (MalformedURLException e) {
-            LOGGER.log(Level.SEVERE, "Wrong URL" + RSS_URL, e);
-            return;
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Internet error", e);
-            return;
-        } catch (FeedException e) {
-            LOGGER.log(Level.SEVERE, "Invalid feed", e);
-            return;
-        }
-
-//        System.out.println("Feed title: " + feed.getTitle());
-//        System.out.println("--------------------------------");
-
-        // adatbázis inicializálása
         try {
             DatabaseManager.initializeDatabase();
         } catch (Exception e) {
@@ -50,48 +33,67 @@ public class RssReader {
             return;
         }
 
-        // 3. cikkek mentese + exception
         ArticleDao dao = new ArticleDao();
+
         int saved = 0;
         int failed = 0;
         int skipped = 0;
+        
+        for (RssSource source : sources) {
 
-        for (SyndEntry entry : feed.getEntries()) {
             try {
 
-                int result = dao.save(toArticle(entry));
+                URL url = new URL(source.getUrl());
 
-                if (result > 0) {
-                    saved++;
-                } else if (result == 0) {
-                    skipped++;
-                } else {
-                    failed++;
+                SyndFeed feed =
+                        new SyndFeedInput().build(new XmlReader(url));
+
+                for (SyndEntry entry : feed.getEntries()) {
+
+                    Article article = toArticle(entry);
+
+                    article.setSource(source.getName());
+
+                    int result = dao.save(article);
+
+                    if (result > 0) {
+                        saved++;
+                    } else if (result == 0) {
+                        skipped++;
+                    } else {
+                        failed++;
+                    }
                 }
 
             } catch (Exception e) {
-                failed++;
 
                 LOGGER.log(Level.WARNING,
-                        "Couldn't save this article: " + entry.getLink(), e);
+                        "Couldn't process feed: "
+                        + source.getName(), e);
+
+                failed++;
             }
         }
-        
+        LOGGER.info(
+        "Saved: " + saved
+        + ", Failed: " + failed
+        + ", Skipped: " + skipped);
 
-        LOGGER.info("Saved: " + saved + ", Failed: " + failed + ", Skipped: " + skipped);
     }
-
     private Article toArticle(SyndEntry entry) {
         Article article = new Article();
-        article.setSource("Marosvasarhelyi Info");
         article.setTitle(entry.getTitle());
         if (entry.getPublishedDate() != null) {
-            article.setPublishDate(entry.getPublishedDate().toString());
+            article.setPublishDate(
+                new Timestamp(entry.getPublishedDate().getTime())
+            );
         }
         article.setUrl(entry.getLink());
         article.setAuthor(entry.getAuthor());
-        article.setCreatedAt(LocalDateTime.now().toString());
-        article.setLastModifiedAt(LocalDateTime.now().toString());
+        article.setCreatedAt(
+        Timestamp.valueOf(LocalDateTime.now()));
+        article.setLastModifiedAt(
+        Timestamp.valueOf(LocalDateTime.now()));
         return article;
     }
 }

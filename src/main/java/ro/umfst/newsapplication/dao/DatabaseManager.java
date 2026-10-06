@@ -21,9 +21,9 @@ public class DatabaseManager {
                     author TEXT,
                     source TEXT,
                     url TEXT UNIQUE,
-                    publish_date TEXT,
-                    created_at TEXT,
-                    last_modified_at TEXT
+                    publish_date TIMESTAMP,
+                    created_at TIMESTAMP,
+                    last_modified_at TIMESTAMP
                 );
                 """;
 

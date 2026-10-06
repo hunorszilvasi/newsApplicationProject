@@ -3,6 +3,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package ro.umfst.newsapplication.model;
+import java.sql.Timestamp;
 
 /**
  *
@@ -14,9 +15,9 @@ public class Article {
     private String author;
     private String source;
     private String url;
-    private String publishDate;
-    private String createdAt;
-    private String lastModifiedAt;
+    private Timestamp publishDate;
+    private Timestamp createdAt;
+    private Timestamp lastModifiedAt;
     
     public Article(){
     }
@@ -41,15 +42,15 @@ public class Article {
         return url;
     }
 
-    public String getPublishDate() {
+    public Timestamp getPublishDate() {
         return publishDate;
     }
 
-    public String getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public String getLastModifiedAt() {
+    public Timestamp getLastModifiedAt() {
         return lastModifiedAt;
     }
 
@@ -73,15 +74,15 @@ public class Article {
         this.url = url;
     }
 
-    public void setPublishDate(String publishDate) {
+    public void setPublishDate(Timestamp publishDate) {
         this.publishDate = publishDate;
     }
 
-    public void setCreatedAt(String createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
 
-    public void setLastModifiedAt(String lastModifiedAt) {
+    public void setLastModifiedAt(Timestamp lastModifiedAt) {
         this.lastModifiedAt = lastModifiedAt;
     }
 

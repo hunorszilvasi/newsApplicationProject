@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.Timestamp;
 import ro.umfst.newsapplication.model.Article;
 public class ArticleDao {
 
@@ -26,11 +27,9 @@ public class ArticleDao {
             pstmt.setString(2, article.getAuthor());
             pstmt.setString(3, article.getSource());
             pstmt.setString(4, article.getUrl());
-            pstmt.setString(5, article.getPublishDate());
-            pstmt.setString(6, article.getCreatedAt());
-            pstmt.setString(7, article.getLastModifiedAt());
-
-            pstmt.executeUpdate();
+            pstmt.setTimestamp(5, article.getPublishDate());
+            pstmt.setTimestamp(6, article.getCreatedAt());
+            pstmt.setTimestamp(7, article.getLastModifiedAt());
 
             return pstmt.executeUpdate();
 
@@ -53,9 +52,9 @@ public class ArticleDao {
                 article.setAuthor(rs.getString("author"));
                 article.setSource(rs.getString("source"));
                 article.setUrl(rs.getString("url"));
-                article.setPublishDate(rs.getString("publish_date"));
-                article.setCreatedAt(rs.getString("created_at"));
-                article.setLastModifiedAt(rs.getString("last_modified_at"));
+                article.setPublishDate(rs.getTimestamp("publish_date"));
+                article.setCreatedAt(rs.getTimestamp("created_at"));
+                article.setLastModifiedAt(rs.getTimestamp("last_modified_at"));
                 articles.add(article);
             }
             
@@ -99,9 +98,9 @@ public class ArticleDao {
             pstmt.setString(2, article.getAuthor());
             pstmt.setString(3, article.getSource());
             pstmt.setString(4, article.getUrl());
-            pstmt.setString(5, article.getPublishDate());
-            pstmt.setString(6, article.getCreatedAt());
-            pstmt.setString(7, article.getLastModifiedAt());
+            pstmt.setTimestamp(5, article.getPublishDate());
+            pstmt.setTimestamp(6, article.getCreatedAt());
+            pstmt.setTimestamp(7, article.getLastModifiedAt());
             pstmt.setInt(8, article.getId());
 
             pstmt.executeUpdate();
