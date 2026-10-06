@@ -14,7 +14,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>26</maven.compiler.release>
-        <exec.mainClass>com.mycompany.newsapplication.NewsApplication</exec.mainClass>
+        <exec.mainClass>ro.umfst.newsapplication.main.NewsApplication</exec.mainClass>
     </properties>
 
     <dependencies>
