@@ -2,6 +2,9 @@ package ro.umfst.newsapplication.ui;
 import ro.umfst.newsapplication.model.Article;
 import ro.umfst.newsapplication.service.RssReader;
 import ro.umfst.newsapplication.dao.*;
+import java.util.List;
+import ro.umfst.newsapplication.model.Article;
+import ro.umfst.newsapplication.model.ArticleTitleComparator;
 
 import ro.umfst.newsapplication.dao.ArticleDao;
 import javax.swing.JFrame;
@@ -25,7 +28,7 @@ import java.awt.BorderLayout;
 
 public class NewsFrame extends JFrame {
     private DefaultTableModel model;
-    // Article details components
+    // attributumok
     private JLabel titleLabel;
     private JLabel sourceLabel;
     private JLabel authorLabel;
@@ -69,6 +72,7 @@ public class NewsFrame extends JFrame {
             },
             0
     ) {
+        // ne lehessen beleirni a cellakba
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
@@ -95,7 +99,7 @@ public class NewsFrame extends JFrame {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoCreateRowSorter(true);
 
-        // Hide columns that belong in the details panel
+        // Rejtett oszlopok
         String[] hiddenColumns = {
             "ID",
             "Author",
@@ -114,7 +118,7 @@ public class NewsFrame extends JFrame {
 
         table.setAutoCreateRowSorter(true);
         
-        // Cover image preview
+        // kep
         coverImageLabel = new JLabel("Select an article to view its image");
         coverImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         coverImageLabel.setVerticalAlignment(SwingConstants.CENTER);
@@ -263,12 +267,12 @@ public class NewsFrame extends JFrame {
                     options[0]
             );
 
-            // Cancel button or dialog closed
+            // Cancel vagy close
             if (choice == JOptionPane.CLOSED_OPTION) {
                 return;
             }
 
-            // Convert visible row index to model row index
+            // sor alakitas
             int viewRow = table.getSelectedRow();
             int row = table.convertRowIndexToModel(viewRow);
 
@@ -311,7 +315,7 @@ public class NewsFrame extends JFrame {
             );
 
             // Update the selected field
-            if (choice == 0) {
+            if (choice == 0) { // ha title
 
                 String newTitle = JOptionPane.showInputDialog(
                         this,
@@ -325,7 +329,7 @@ public class NewsFrame extends JFrame {
 
                 article.setTitle(newTitle.trim());
 
-            } else if (choice == 1) {
+            } else if (choice == 1) { // ha author
 
                 String newAuthor = JOptionPane.showInputDialog(
                         this,
@@ -348,7 +352,7 @@ public class NewsFrame extends JFrame {
             try {
                 dao.updateArticle(article);
 
-                // Reload the table with updated data
+                // ujratolteni 
                 loadArticles();
 
                 // Find the updated article in the table and select it
@@ -384,7 +388,7 @@ public class NewsFrame extends JFrame {
         
         
 
-        // Search function
+        // Search label
         JPanel topPanel = new JPanel();
         JTextField searchField = new JTextField(20);
         JButton searchButton = new JButton("Search");
@@ -392,13 +396,13 @@ public class NewsFrame extends JFrame {
         topPanel.add(clearDbButton);
         topPanel.add(loadingLabel);
         topPanel.add(searchField);
+        topPanel.add(searchButton);
         topPanel.add(editButton);
         topPanel.add(deleteButton);
-        topPanel.add(searchButton);
         topPanel.add(refreshButton);
         add(topPanel, BorderLayout.NORTH);
         
-        // Search button action listener
+        // search button actionListener
         searchButton.addActionListener(ev -> {
             String keyword = searchField.getText();
             List<Article> searchResults = dao.searchByTitle(keyword);
@@ -421,6 +425,7 @@ public class NewsFrame extends JFrame {
         }
         });
         
+        // Ketto paneles view (gmail szeru)
         JScrollPane tableScrollPane = new JScrollPane(table);
 
         JPanel leftPanel = new JPanel(new BorderLayout());
@@ -454,11 +459,13 @@ public class NewsFrame extends JFrame {
         setVisible(true);
         
         }    
+    // articlek betoltese a guiba
     private void loadArticles() {
         model.setRowCount(0);
 
         ArticleDao dao = new ArticleDao();
         List<Article> articles = dao.findAll();
+        articles.sort(new ArticleTitleComparator()); // ABC sorrendbe comparatorral
 
         for (Article article : articles) {
             model.addRow(new Object[]{
@@ -477,6 +484,7 @@ public class NewsFrame extends JFrame {
             });
         }
     }
+    // cover image betoltes
     private void displayCoverImage(String imagePath) {
         if (imagePath == null || imagePath.isBlank()) {
             coverImageLabel.setIcon(null);
@@ -528,6 +536,7 @@ public class NewsFrame extends JFrame {
             ex.printStackTrace();
         }
     }
+    // jobb oldali panel szerkezete
     private JPanel createDetailsPanel() {
 
         JPanel detailsPanel = new JPanel(new BorderLayout(10, 10));
@@ -622,7 +631,7 @@ public class NewsFrame extends JFrame {
                     );
                     return;
                 }
-
+                // megnyitani a browsert
                 java.awt.Desktop.getDesktop().browse(
                         new java.net.URI(selectedArticleUrl)
                 );
@@ -641,7 +650,7 @@ public class NewsFrame extends JFrame {
 
         return detailsPanel;
     }
-    
+    // jobb oldali panel feltoltese
     private void showArticleDetails(int row) {
         if (row < 0) {
             return;
@@ -701,9 +710,9 @@ public class NewsFrame extends JFrame {
         String imagePath = String.valueOf(model.getValueAt(row, 11));
         displayCoverImage(imagePath);
     }
-    
+    // a jobb oldali panel torlese (pl delete eseten)
     private void clearArticleDetails() {
-        // Clear article details
+        // article details
         titleLabel.setText("");
         sourceLabel.setText("Source: ");
         authorLabel.setText("Author: ");
@@ -715,13 +724,13 @@ public class NewsFrame extends JFrame {
         lastModifiedAtLabel.setText("Last Modified At: ");
         languageLabel.setText("Language: ");
 
-        // Clear description
+        // description
         descriptionArea.setText("");
 
-        // Clear cover image
+        // cover image
         displayCoverImage(null);
 
-        // Clear selected article URL
+        // selected article URL
         selectedArticleUrl = null;
         openArticleButton.setEnabled(false);
     }

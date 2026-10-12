@@ -11,9 +11,9 @@ public class DatabaseManager {
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL);
     }
-
+    // adatbazis letrehozas
     public static void initializeDatabase() {
-
+        
         String sql = """
                 CREATE TABLE IF NOT EXISTS articles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,14 +36,14 @@ public class DatabaseManager {
 
             stmt.execute(sql);
             System.out.println("Database initialized successfully.");
-
+        // sql exception kezeles
         } catch (SQLException e) {
             System.err.println(
                     "Database initialization failed: " + e.getMessage()
             );
         }
     }
-    
+    // adatbazis teljes torlese
     public static boolean clearDatabase() {
         String sql = "DELETE FROM articles";
 

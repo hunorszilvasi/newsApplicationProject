@@ -9,7 +9,7 @@ public class ImageExtractor {
 
     public static String extractImage(SyndEntry entry) {
 
-        // 1. Try to extract an image from the RSS description.
+        // kep kinyerese a cikkbol rss
         if (entry.getDescription() != null) {
             String html = entry.getDescription().getValue();
 

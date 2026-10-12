@@ -45,7 +45,7 @@ public class RssReader {
 
             try {
 
-                // Check the HTTP response before parsing the RSS feed
+                // http statusz kod mielott lekerjuk az rss feedet
                 int statusCode = HttpHelper.getStatusCode(source.getUrl());
 
                 if (statusCode != HttpURLConnection.HTTP_OK) {
@@ -98,10 +98,12 @@ public class RssReader {
         + ", Skipped: " + skipped);
 
     }
+    
+    // kezelheto article formatumba SyndEntry-bol
     private Article toArticle(SyndEntry entry, RssSource source) {
         Article article = new Article();
 
-        // Basic article information
+        // Basic
         article.setTitle(entry.getTitle());
         article.setUrl(entry.getLink());
         article.setAuthor(entry.getAuthor());

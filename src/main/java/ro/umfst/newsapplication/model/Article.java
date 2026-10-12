@@ -9,7 +9,7 @@ import java.sql.Timestamp;
  *
  * @author hunorszilvasi
  */
-public class Article {
+public class Article extends BaseEntity implements Identifiable{
     private int id;
     private String title;
     private String author;
@@ -23,7 +23,43 @@ public class Article {
     private String language;
     private String coverImage;
     
-    public Article(){
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+
+        Article article = (Article) obj;
+        return java.util.Objects.equals(
+            businessKey(),
+            article.businessKey()
+        );
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(businessKey());
+    }
+    
+    @Override
+    public String businessKey() {
+        return getSource() + "|" + getUrl();
+    }
+    
+    public Article(int id) {
+        super(id);
+    }
+    public Article() {
+        super(0);
+    }
+    
+    @Override
+    public String getEntityType() {
+        return "Article";
     }
 
     public int getId() {

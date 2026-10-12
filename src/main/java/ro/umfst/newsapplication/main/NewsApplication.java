@@ -15,7 +15,7 @@ import javax.swing.table.DefaultTableModel;
 import java.util.List;
 /**
  *
- * @author hunorszilvasi
+ * @author hunorszilvasi // MAIN
  */
 public class NewsApplication {
 
