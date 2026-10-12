@@ -24,8 +24,25 @@ import javax.swing.JPanel;
 import java.awt.BorderLayout;
 
 public class NewsFrame extends JFrame {
-    DefaultTableModel model;
+    private DefaultTableModel model;
+    // Article details components
+    private JLabel titleLabel;
+    private JLabel sourceLabel;
+    private JLabel authorLabel;
+    private JLabel publisherLabel;
+    private JLabel dateLabel;
     private JLabel coverImageLabel;
+    private JLabel idLabel;
+    private JLabel urlLabel;
+    private JLabel createdAtLabel;
+    private JLabel lastModifiedAtLabel;
+    private JLabel languageLabel;
+
+    private JTextArea descriptionArea;
+    private JButton openArticleButton;
+
+    private String selectedArticleUrl;
+    
     public NewsFrame() {
         setLayout(new BorderLayout());
         setTitle("News Reader");
@@ -38,9 +55,9 @@ public class NewsFrame extends JFrame {
         model = new DefaultTableModel(
             new String[]{
                 "ID",
+                "Title",
                 "Source",
                 "Author",
-                "Title",
                 "Description",
                 "Publisher",
                 "URL",
@@ -58,12 +75,12 @@ public class NewsFrame extends JFrame {
         }
     };
         
-        for(Article article : articles){
+        for (Article article : articles) {
             model.addRow(new Object[]{
                 article.getId(),
+                article.getTitle(),
                 article.getSource(),
                 article.getAuthor(),
-                article.getTitle(),
                 article.getDescription(),
                 article.getPublisher(),
                 article.getUrl(),
@@ -75,24 +92,33 @@ public class NewsFrame extends JFrame {
             });
         }
         JTable table = new JTable(model);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setAutoCreateRowSorter(true);
+
+        // Hide columns that belong in the details panel
+        String[] hiddenColumns = {
+            "ID",
+            "Author",
+            "Description",
+            "Publisher",
+            "URL",
+            "Created At",
+            "Last Modified",
+            "Language",
+            "Cover Image"
+        };
+
+        for (String columnName : hiddenColumns) {
+            table.removeColumn(table.getColumn(columnName));
+        }
+
+        table.setAutoCreateRowSorter(true);
         
         // Cover image preview
         coverImageLabel = new JLabel("Select an article to view its image");
         coverImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         coverImageLabel.setVerticalAlignment(SwingConstants.CENTER);
         coverImageLabel.setPreferredSize(new Dimension(300, 200));
-
-        // Update image when an article is selected
-        table.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                int row = table.getSelectedRow();
-
-                if (row >= 0) {
-                    String imagePath = (String) model.getValueAt(row, 11);
-                    displayCoverImage(imagePath);
-                }
-            }
-        });
         
         // Refresh Gomb
         // Loading animation
@@ -170,6 +196,7 @@ public class NewsFrame extends JFrame {
                     daoForDelete.deleteArticle(id);
                 }
                 loadArticles();
+                clearArticleDetails();
             }
             }
             
@@ -191,7 +218,7 @@ public class NewsFrame extends JFrame {
 
                 if (success) {
                     loadArticles();
-
+                    clearArticleDetails();
                     JOptionPane.showMessageDialog(
                         this,
                         "Database cleared successfully.",
@@ -211,7 +238,18 @@ public class NewsFrame extends JFrame {
         
         // Edit button
         JButton editButton = new JButton("Edit");
+
         editButton.addActionListener(e -> {
+
+            // Check if exactly one article is selected
+            if (table.getSelectedRowCount() != 1) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please select exactly one article."
+                );
+                return;
+            }
+
             String[] options = {"Title", "Author"};
 
             int choice = JOptionPane.showOptionDialog(
@@ -224,79 +262,123 @@ public class NewsFrame extends JFrame {
                     options,
                     options[0]
             );
-            // Ha title modosit 
-            if (choice == 0) { 
+
+            // Cancel button or dialog closed
+            if (choice == JOptionPane.CLOSED_OPTION) {
+                return;
+            }
+
+            // Convert visible row index to model row index
+            int viewRow = table.getSelectedRow();
+            int row = table.convertRowIndexToModel(viewRow);
+
+            // Read article data using the current model column order
+            Article article = new Article();
+
+            article.setId((Integer) model.getValueAt(row, 0));
+            article.setTitle(String.valueOf(model.getValueAt(row, 1)));
+            article.setSource(String.valueOf(model.getValueAt(row, 2)));
+            article.setAuthor(String.valueOf(model.getValueAt(row, 3)));
+            article.setDescription(String.valueOf(model.getValueAt(row, 4)));
+            article.setPublisher(String.valueOf(model.getValueAt(row, 5)));
+            article.setUrl(String.valueOf(model.getValueAt(row, 6)));
+
+            // Convert date strings to Timestamp safely
+            Object publishDateValue = model.getValueAt(row, 7);
+            if (publishDateValue != null
+                    && !publishDateValue.toString().isBlank()
+                    && !publishDateValue.toString().equals("null")) {
+                article.setPublishDate(
+                        Timestamp.valueOf(publishDateValue.toString())
+                );
+            }
+
+            Object createdAtValue = model.getValueAt(row, 8);
+            if (createdAtValue != null
+                    && !createdAtValue.toString().isBlank()
+                    && !createdAtValue.toString().equals("null")) {
+                article.setCreatedAt(
+                        Timestamp.valueOf(createdAtValue.toString())
+                );
+            }
+
+            article.setLanguage(
+                    String.valueOf(model.getValueAt(row, 10))
+            );
+
+            article.setCoverImage(
+                    String.valueOf(model.getValueAt(row, 11))
+            );
+
+            // Update the selected field
+            if (choice == 0) {
 
                 String newTitle = JOptionPane.showInputDialog(
                         this,
-                        "Enter new title:"
+                        "Enter new title:",
+                        article.getTitle()
                 );
 
-                if (newTitle != null && !newTitle.isBlank()) {
-                    System.out.println("New title: " + newTitle);
-                    // uj article letrehozas az update() miatt
-                    Article article = new Article();
-                    
-                    if (table.getSelectedRowCount() != 1) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Please select exactly one article.");
-                        return;
-                    }
-                    int row = table.getSelectedRow();
-                    
-                    Timestamp currentDateModified = Timestamp.valueOf(LocalDateTime.now());
-                    
-                    article.setId((Integer) model.getValueAt(row, 0));
-                    article.setSource((String) model.getValueAt(row, 1));
-                    article.setAuthor((String) model.getValueAt(row, 2));
-                    article.setTitle((String) newTitle);
-                    article.setUrl((String) model.getValueAt(row, 4));
-                    article.setPublishDate((Timestamp) model.getValueAt(row, 5));
-                    article.setCreatedAt((Timestamp) model.getValueAt(row, 6));
-                    article.setLastModifiedAt(currentDateModified);
-                    
-                    dao.updateArticle(article);
-                    loadArticles();
+                if (newTitle == null || newTitle.isBlank()) {
+                    return;
                 }
-            // ha Author modosit
+
+                article.setTitle(newTitle.trim());
+
             } else if (choice == 1) {
 
                 String newAuthor = JOptionPane.showInputDialog(
                         this,
-                        "Enter new author:"
+                        "Enter new author:",
+                        article.getAuthor()
                 );
 
-                if (newAuthor != null && !newAuthor.isBlank()) {
-                    System.out.println("New author: " + newAuthor);
-                    Article article = new Article();
-                    
-                    if (table.getSelectedRowCount() != 1) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Please select exactly one article.");
-                        return;
-                    }
-                    int row = table.getSelectedRow();
-                    
-                    Timestamp currentDateModified = Timestamp.valueOf(LocalDateTime.now());
-                    
-                    article.setId((Integer) model.getValueAt(row, 0));
-                    article.setSource((String) model.getValueAt(row, 1));
-                    article.setAuthor((String) newAuthor);
-                    article.setTitle((String) model.getValueAt(row,3 ));
-                    article.setUrl((String) model.getValueAt(row, 4));
-                    article.setPublishDate((Timestamp) model.getValueAt(row, 5));
-                    article.setCreatedAt((Timestamp) model.getValueAt(row, 6));
-                    article.setLastModifiedAt(currentDateModified);
-                    
-                    dao.updateArticle(article);
-                    loadArticles();
+                if (newAuthor == null || newAuthor.isBlank()) {
+                    return;
                 }
 
-            } else {
+                article.setAuthor(newAuthor.trim());
+            }
 
-                System.out.println("User cancelled");
+            // Update modification timestamp
+            article.setLastModifiedAt(
+                    Timestamp.valueOf(LocalDateTime.now())
+            );
+
+            try {
+                dao.updateArticle(article);
+
+                // Reload the table with updated data
+                loadArticles();
+
+                // Find the updated article in the table and select it
+                // updating the right panel after edit
+                for (int i = 0; i < model.getRowCount(); i++) {
+                    int currentId = (Integer) model.getValueAt(i, 0);
+
+                    if (currentId == article.getId()) {
+                        int viewRow1 = table.convertRowIndexToView(i);
+
+                        if (viewRow1 != -1) {
+                            table.setRowSelectionInterval(viewRow1, viewRow1);
+                        }
+
+                        // Refresh the right-side details panel
+                        showArticleDetails(i);
+                        break;
+                    }
+                }
+
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Article updated successfully!"
+                );
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Error updating article: " + ex.getMessage()
+                );
             }
         });
         
@@ -324,44 +406,66 @@ public class NewsFrame extends JFrame {
             for(Article article : searchResults){
             model.addRow(new Object[]{
                 article.getId(),
+                article.getTitle(),
                 article.getSource(),
                 article.getAuthor(),
-                article.getTitle(),
+                article.getDescription(),
+                article.getPublisher(),
                 article.getUrl(),
                 article.getPublishDate(),
                 article.getCreatedAt(),
-                article.getLastModifiedAt()
+                article.getLastModifiedAt(),
+                article.getLanguage(),
+                article.getCoverImage()
             });
         }
         });
         
-        JPanel centerPanel = new JPanel(new BorderLayout());
+        JScrollPane tableScrollPane = new JScrollPane(table);
 
-        centerPanel.add(new JScrollPane(table), BorderLayout.CENTER);
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.add(tableScrollPane, BorderLayout.CENTER);
 
-        JPanel imagePanel = new JPanel(new BorderLayout());
-        imagePanel.setBorder(
-                BorderFactory.createTitledBorder("Article Image")
+        JPanel detailsPanel = createDetailsPanel();
+
+        JSplitPane splitPane = new JSplitPane(
+                JSplitPane.HORIZONTAL_SPLIT,
+                leftPanel,
+                detailsPanel
         );
-        imagePanel.add(coverImageLabel, BorderLayout.CENTER);
 
-        centerPanel.add(imagePanel, BorderLayout.SOUTH);
+        splitPane.setDividerLocation(450);
+        splitPane.setResizeWeight(0.35);
+        splitPane.setOneTouchExpandable(true);
 
-        add(centerPanel, BorderLayout.CENTER);
+        add(splitPane, BorderLayout.CENTER);
+        
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int viewRow = table.getSelectedRow();
+
+                if (viewRow >= 0) {
+                    int modelRow = table.convertRowIndexToModel(viewRow);
+                    showArticleDetails(modelRow);
+                }
+            }
+        });
 
         setVisible(true);
         
         }    
-    private void loadArticles(){
+    private void loadArticles() {
         model.setRowCount(0);
+
         ArticleDao dao = new ArticleDao();
         List<Article> articles = dao.findAll();
-        for(Article article : articles){
+
+        for (Article article : articles) {
             model.addRow(new Object[]{
                 article.getId(),
+                article.getTitle(),
                 article.getSource(),
                 article.getAuthor(),
-                article.getTitle(),
                 article.getDescription(),
                 article.getPublisher(),
                 article.getUrl(),
@@ -423,5 +527,202 @@ public class NewsFrame extends JFrame {
             coverImageLabel.setText("Could not load image");
             ex.printStackTrace();
         }
+    }
+    private JPanel createDetailsPanel() {
+
+        JPanel detailsPanel = new JPanel(new BorderLayout(10, 10));
+
+        detailsPanel.setBorder(
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        );
+
+        // Article information
+        JPanel informationPanel = new JPanel();
+        informationPanel.setLayout(
+                new BoxLayout(informationPanel, BoxLayout.Y_AXIS)
+        );
+
+        titleLabel = new JLabel("Select an article");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(22f));
+
+        sourceLabel = new JLabel("Source: -");
+        authorLabel = new JLabel("Author: -");
+        publisherLabel = new JLabel("Publisher: -");
+        dateLabel = new JLabel("Published: -");
+        idLabel = new JLabel("ID: -");
+        urlLabel = new JLabel("URL: -");
+        createdAtLabel = new JLabel("Created At: -");
+        lastModifiedAtLabel = new JLabel("Last Modified At: -");
+        languageLabel = new JLabel("Language: -");
+
+        informationPanel.add(titleLabel);
+        informationPanel.add(Box.createVerticalStrut(10));
+        informationPanel.add(sourceLabel);
+        informationPanel.add(authorLabel);
+        informationPanel.add(publisherLabel);
+        informationPanel.add(dateLabel);
+        informationPanel.add(idLabel);
+        informationPanel.add(urlLabel);
+        informationPanel.add(createdAtLabel);
+        informationPanel.add(lastModifiedAtLabel);
+        informationPanel.add(languageLabel);
+
+        detailsPanel.add(informationPanel, BorderLayout.NORTH);
+
+        // Cover image
+        coverImageLabel = new JLabel("No article selected");
+        coverImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        coverImageLabel.setPreferredSize(new Dimension(400, 220));
+
+        JPanel imagePanel = new JPanel(new BorderLayout());
+        imagePanel.setBorder(
+                BorderFactory.createTitledBorder("Cover Image")
+        );
+        imagePanel.add(coverImageLabel, BorderLayout.CENTER);
+
+        // Description
+        descriptionArea = new JTextArea();
+        descriptionArea.setEditable(false);
+        descriptionArea.setLineWrap(true);
+        descriptionArea.setWrapStyleWord(true);
+        descriptionArea.setFont(descriptionArea.getFont().deriveFont(14f));
+        descriptionArea.setText("Select an article to read its description.");
+
+        JScrollPane descriptionScrollPane =
+                new JScrollPane(descriptionArea);
+
+        JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
+        contentPanel.add(imagePanel, BorderLayout.NORTH);
+        contentPanel.add(descriptionScrollPane, BorderLayout.CENTER);
+
+        detailsPanel.add(contentPanel, BorderLayout.CENTER);
+
+        // Open article button
+        openArticleButton = new JButton("Open full article");
+        openArticleButton.setEnabled(false);
+        openArticleButton.addActionListener(e -> {
+            if (selectedArticleUrl == null
+                    || selectedArticleUrl.isBlank()
+                    || selectedArticleUrl.equals("null")) {
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        "No article URL available.",
+                        "Cannot Open Article",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            try {
+                if (!java.awt.Desktop.isDesktopSupported()) {
+                    JOptionPane.showMessageDialog(
+                            this,
+                            "Opening the browser is not supported on this system."
+                    );
+                    return;
+                }
+
+                java.awt.Desktop.getDesktop().browse(
+                        new java.net.URI(selectedArticleUrl)
+                );
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Could not open the article: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+        });
+
+        detailsPanel.add(openArticleButton, BorderLayout.SOUTH);
+
+        return detailsPanel;
+    }
+    
+    private void showArticleDetails(int row) {
+        if (row < 0) {
+            return;
+        }
+
+        titleLabel.setText(
+            String.valueOf(model.getValueAt(row, 1))
+        );
+
+        sourceLabel.setText(
+            "Source: " + String.valueOf(model.getValueAt(row, 2))
+        );
+
+        authorLabel.setText(
+            "Author: " + String.valueOf(model.getValueAt(row, 3))
+        );
+
+        publisherLabel.setText(
+            "Publisher: " + String.valueOf(model.getValueAt(row, 5))
+        );
+
+        dateLabel.setText(
+            "Published: " + String.valueOf(model.getValueAt(row, 7))
+        );
+        idLabel.setText(
+            "ID: " + String.valueOf(model.getValueAt(row, 0))
+        );
+
+        urlLabel.setText(
+            "URL: " + String.valueOf(model.getValueAt(row, 6))
+        );
+
+        createdAtLabel.setText(
+            "Created At: " + String.valueOf(model.getValueAt(row, 8))
+        );
+
+        lastModifiedAtLabel.setText(
+            "Last Modified At: " + String.valueOf(model.getValueAt(row, 9))
+        );
+
+        languageLabel.setText(
+            "Language: " + String.valueOf(model.getValueAt(row, 10))
+        );
+
+        String description = String.valueOf(model.getValueAt(row, 4));
+        descriptionArea.setText(description);
+        descriptionArea.setCaretPosition(0);
+
+        selectedArticleUrl = String.valueOf(model.getValueAt(row, 6));
+
+        openArticleButton.setEnabled(
+            selectedArticleUrl != null
+            && !selectedArticleUrl.isBlank()
+            && !selectedArticleUrl.equals("null")
+        );
+
+        String imagePath = String.valueOf(model.getValueAt(row, 11));
+        displayCoverImage(imagePath);
+    }
+    
+    private void clearArticleDetails() {
+        // Clear article details
+        titleLabel.setText("");
+        sourceLabel.setText("Source: ");
+        authorLabel.setText("Author: ");
+        publisherLabel.setText("Publisher: ");
+        dateLabel.setText("Published: ");
+        idLabel.setText("ID: ");
+        urlLabel.setText("URL: ");
+        createdAtLabel.setText("Created At: ");
+        lastModifiedAtLabel.setText("Last Modified At: ");
+        languageLabel.setText("Language: ");
+
+        // Clear description
+        descriptionArea.setText("");
+
+        // Clear cover image
+        displayCoverImage(null);
+
+        // Clear selected article URL
+        selectedArticleUrl = null;
+        openArticleButton.setEnabled(false);
     }
 }
