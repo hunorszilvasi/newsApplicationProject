@@ -12,6 +12,8 @@ import ro.umfst.newsapplication.model.Article;
 import ro.umfst.newsapplication.model.RssSource;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.HttpURLConnection;
+import ro.umfst.newsapplication.service.HttpHelper;
 import java.net.URL;
 import java.util.List;
 import java.time.LocalDateTime;
@@ -38,10 +40,23 @@ public class RssReader {
         int saved = 0;
         int failed = 0;
         int skipped = 0;
-        
+        //
         for (RssSource source : sources) {
 
             try {
+
+                // Check the HTTP response before parsing the RSS feed.
+                int statusCode = HttpHelper.getStatusCode(source.getUrl());
+
+                if (statusCode != HttpURLConnection.HTTP_OK) {
+                    LOGGER.warning(
+                            "RSS source returned HTTP status "
+                            + statusCode + ": " + source.getName()
+                    );
+
+                    failed++;
+                    continue;
+                }
 
                 URL url = new URL(source.getUrl());
 
@@ -51,7 +66,6 @@ public class RssReader {
                 for (SyndEntry entry : feed.getEntries()) {
 
                     Article article = toArticle(entry);
-
                     article.setSource(source.getName());
 
                     int result = dao.save(article);
@@ -67,13 +81,16 @@ public class RssReader {
 
             } catch (Exception e) {
 
-                LOGGER.log(Level.WARNING,
-                        "Couldn't process feed: "
-                        + source.getName(), e);
+                LOGGER.log(
+                        Level.WARNING,
+                        "Couldn't process feed: " + source.getName(),
+                        e
+                );
 
                 failed++;
             }
         }
+        //
         LOGGER.info(
         "Saved: " + saved
         + ", Failed: " + failed
