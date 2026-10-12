@@ -1,24 +1,48 @@
 package ro.umfst.newsapplication.service;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import ro.umfst.newsapplication.model.RssSource;
-
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import ro.umfst.newsapplication.model.RssConfig;
+import ro.umfst.newsapplication.model.RssSource;
 
 public class RSSSourceLoader {
 
     public List<RssSource> loadSources() {
-        // beolvassa az rss.json filet (a sourceokat)
-        Reader reader = new InputStreamReader(
-                getClass().getClassLoader()
-                        .getResourceAsStream("rss.json"));
 
-        Type type = new TypeToken<List<RssSource>>() {}.getType();
+        Gson gson = new Gson();
 
-        return new Gson().fromJson(reader, type);
+        try (InputStream input = getClass()
+                .getClassLoader()
+                .getResourceAsStream("rss.json")) {
+
+            if (input == null) {
+                throw new IllegalStateException(
+                    "rss.json not found in resources."
+                );
+            }
+
+            try (Reader reader = new InputStreamReader(
+                    input, StandardCharsets.UTF_8)) {
+
+                RssConfig config = gson.fromJson(reader, RssConfig.class);
+
+                if (config == null || config.getRssSources() == null) {
+                    throw new IllegalStateException(
+                        "Invalid rss.json: rssSources is missing."
+                    );
+                }
+
+                return config.getRssSources();
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                "Failed to load RSS sources from rss.json.", e
+            );
+        }
     }
 }

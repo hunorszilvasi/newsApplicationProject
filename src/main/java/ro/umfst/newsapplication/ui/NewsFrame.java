@@ -1,6 +1,7 @@
 package ro.umfst.newsapplication.ui;
 import ro.umfst.newsapplication.model.Article;
 import ro.umfst.newsapplication.service.RssReader;
+import ro.umfst.newsapplication.dao.*;
 
 import ro.umfst.newsapplication.dao.ArticleDao;
 import javax.swing.JFrame;
@@ -24,6 +25,7 @@ import java.awt.BorderLayout;
 
 public class NewsFrame extends JFrame {
     DefaultTableModel model;
+    private JLabel coverImageLabel;
     public NewsFrame() {
         setLayout(new BorderLayout());
         setTitle("News Reader");
@@ -34,14 +36,27 @@ public class NewsFrame extends JFrame {
         List<Article> articles = dao.findAll();
 
         model = new DefaultTableModel(
-                    new String[]{"ID", "Source", "Author", "Title", "URL", "Publish Date", "Created at", "lastModifiedAt"},
-                    0) {
-
-                @Override
-                public boolean isCellEditable(int row, int column) {
-                    return false;
-                }
-            };
+            new String[]{
+                "ID",
+                "Source",
+                "Author",
+                "Title",
+                "Description",
+                "Publisher",
+                "URL",
+                "Publish Date",
+                "Created At",
+                "Last Modified",
+                "Language",
+                "Cover Image"
+            },
+            0
+    ) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
         
         for(Article article : articles){
             model.addRow(new Object[]{
@@ -49,13 +64,36 @@ public class NewsFrame extends JFrame {
                 article.getSource(),
                 article.getAuthor(),
                 article.getTitle(),
+                article.getDescription(),
+                article.getPublisher(),
                 article.getUrl(),
                 article.getPublishDate(),
                 article.getCreatedAt(),
-                article.getLastModifiedAt()
+                article.getLastModifiedAt(),
+                article.getLanguage(),
+                article.getCoverImage()
             });
         }
         JTable table = new JTable(model);
+        
+        // Cover image preview
+        coverImageLabel = new JLabel("Select an article to view its image");
+        coverImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        coverImageLabel.setVerticalAlignment(SwingConstants.CENTER);
+        coverImageLabel.setPreferredSize(new Dimension(300, 200));
+
+        // Update image when an article is selected
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int row = table.getSelectedRow();
+
+                if (row >= 0) {
+                    String imagePath = (String) model.getValueAt(row, 11);
+                    displayCoverImage(imagePath);
+                }
+            }
+        });
+        
         // Refresh Gomb
         // Loading animation
         ImageIcon originalIcon =
@@ -136,6 +174,41 @@ public class NewsFrame extends JFrame {
             }
             
         });
+        // Clear DB
+        JButton clearDbButton = new JButton("Clear data");
+        clearDbButton.addActionListener(e -> {
+            int result = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to delete all articles?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+            );
+
+            if (result == JOptionPane.YES_OPTION) {
+
+                boolean success = DatabaseManager.clearDatabase();
+
+                if (success) {
+                    loadArticles();
+
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "Database cleared successfully.",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+                } else {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "Failed to clear the database. Please try again.",
+                        "Database Error",
+                        JOptionPane.ERROR_MESSAGE
+                    );
+                }
+            }
+        });
+        
         // Edit button
         JButton editButton = new JButton("Edit");
         editButton.addActionListener(e -> {
@@ -234,6 +307,7 @@ public class NewsFrame extends JFrame {
         JTextField searchField = new JTextField(20);
         JButton searchButton = new JButton("Search");
         
+        topPanel.add(clearDbButton);
         topPanel.add(loadingLabel);
         topPanel.add(searchField);
         topPanel.add(editButton);
@@ -261,8 +335,22 @@ public class NewsFrame extends JFrame {
         }
         });
         
-        add(new JScrollPane(table));
+        JPanel centerPanel = new JPanel(new BorderLayout());
+
+        centerPanel.add(new JScrollPane(table), BorderLayout.CENTER);
+
+        JPanel imagePanel = new JPanel(new BorderLayout());
+        imagePanel.setBorder(
+                BorderFactory.createTitledBorder("Article Image")
+        );
+        imagePanel.add(coverImageLabel, BorderLayout.CENTER);
+
+        centerPanel.add(imagePanel, BorderLayout.SOUTH);
+
+        add(centerPanel, BorderLayout.CENTER);
+
         setVisible(true);
+        
         }    
     private void loadArticles(){
         model.setRowCount(0);
@@ -274,11 +362,66 @@ public class NewsFrame extends JFrame {
                 article.getSource(),
                 article.getAuthor(),
                 article.getTitle(),
+                article.getDescription(),
+                article.getPublisher(),
                 article.getUrl(),
                 article.getPublishDate(),
                 article.getCreatedAt(),
-                article.getLastModifiedAt()
+                article.getLastModifiedAt(),
+                article.getLanguage(),
+                article.getCoverImage()
             });
+        }
+    }
+    private void displayCoverImage(String imagePath) {
+        if (imagePath == null || imagePath.isBlank()) {
+            coverImageLabel.setIcon(null);
+            coverImageLabel.setText("No image available");
+            return;
+        }
+
+        try {
+            ImageIcon imageIcon;
+
+            if (imagePath.startsWith("http://")
+                    || imagePath.startsWith("https://")) {
+
+                imageIcon = new ImageIcon(new java.net.URL(imagePath));
+
+            } else {
+                java.net.URL resource =
+                        getClass().getResource("/" + imagePath);
+
+                if (resource == null) {
+                    coverImageLabel.setIcon(null);
+                    coverImageLabel.setText("Image not found");
+                    return;
+                }
+
+                imageIcon = new ImageIcon(resource);
+            }
+
+            if (imageIcon.getIconWidth() <= 0
+                    || imageIcon.getIconHeight() <= 0) {
+                coverImageLabel.setIcon(null);
+                coverImageLabel.setText("Invalid image");
+                System.out.println("Could not decode image: " + imagePath);
+                return;
+            }
+
+            Image scaledImage = imageIcon.getImage().getScaledInstance(
+                    280,
+                    180,
+                    Image.SCALE_SMOOTH
+            );
+
+            coverImageLabel.setText("");
+            coverImageLabel.setIcon(new ImageIcon(scaledImage));
+
+        } catch (Exception ex) {
+            coverImageLabel.setIcon(null);
+            coverImageLabel.setText("Could not load image");
+            ex.printStackTrace();
         }
     }
 }

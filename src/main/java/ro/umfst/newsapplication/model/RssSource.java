@@ -12,6 +12,7 @@ public class RssSource {
 
     private String name;
     private String url;
+    private String language;
 
     public String getName() {
         return name;
@@ -27,5 +28,12 @@ public class RssSource {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
     }
 }

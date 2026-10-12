@@ -18,6 +18,10 @@ public class Article {
     private Timestamp publishDate;
     private Timestamp createdAt;
     private Timestamp lastModifiedAt;
+    private String description;
+    private String publisher;
+    private String language;
+    private String coverImage;
     
     public Article(){
     }
@@ -85,7 +89,39 @@ public class Article {
     public void setLastModifiedAt(Timestamp lastModifiedAt) {
         this.lastModifiedAt = lastModifiedAt;
     }
+    
+    public String getDescription() {
+        return description;
+    }
 
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getPublisher() {
+        return publisher;
+    }
+
+    public void setPublisher(String publisher) {
+        this.publisher = publisher;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    public String getCoverImage() {
+        return coverImage;
+    }
+
+    public void setCoverImage(String coverImage) {
+        this.coverImage = coverImage;
+    }
+    
     @Override
     public String toString() {
         return "Article{" + "id=" + id + ", title=" + title + ", author=" + author + ", source=" + source + ", url=" + url + ", publishDate=" + publishDate + ", createdAt=" + createdAt + ", lastModifiedAt=" + lastModifiedAt + '}';

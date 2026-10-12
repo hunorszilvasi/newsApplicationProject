@@ -26,7 +26,7 @@ public class RssReader {
     RSSSourceLoader loader = new RSSSourceLoader(); 
     List<RssSource> sources = loader.loadSources(); // betoltsuk a sourceokat
      
-    public void testFeed() {
+    public void testFeed() { // letolteni az adatokat rss feedbol
 
         try {
             DatabaseManager.initializeDatabase();
@@ -45,7 +45,7 @@ public class RssReader {
 
             try {
 
-                // Check the HTTP response before parsing the RSS feed.
+                // Check the HTTP response before parsing the RSS feed
                 int statusCode = HttpHelper.getStatusCode(source.getUrl());
 
                 if (statusCode != HttpURLConnection.HTTP_OK) {
@@ -65,9 +65,10 @@ public class RssReader {
 
                 for (SyndEntry entry : feed.getEntries()) {
 
-                    Article article = toArticle(entry);
+                    Article article = toArticle(entry, source);
                     article.setSource(source.getName());
-
+                    
+                    // adatbazisba mentes
                     int result = dao.save(article);
 
                     if (result > 0) {
@@ -97,20 +98,44 @@ public class RssReader {
         + ", Skipped: " + skipped);
 
     }
-    private Article toArticle(SyndEntry entry) {
+    private Article toArticle(SyndEntry entry, RssSource source) {
         Article article = new Article();
+
+        // Basic article information
         article.setTitle(entry.getTitle());
+        article.setUrl(entry.getLink());
+        article.setAuthor(entry.getAuthor());
+
+        // Description
+        if (entry.getDescription() != null) {
+            article.setDescription(
+                HtmlUtils.cleanHtml(entry.getDescription().getValue())
+            );
+        } else {
+            article.setDescription("");
+        }
+
+        // Publisher
+        article.setPublisher(source.getName());
+
+        // Language
+        article.setLanguage(source.getLanguage());
+
+        // Default cover image
+        article.setCoverImage(ImageExtractor.extractImage(entry));
+
+        // Publication date
         if (entry.getPublishedDate() != null) {
             article.setPublishDate(
                 new Timestamp(entry.getPublishedDate().getTime())
             );
         }
-        article.setUrl(entry.getLink());
-        article.setAuthor(entry.getAuthor());
-        article.setCreatedAt(
-        Timestamp.valueOf(LocalDateTime.now()));
-        article.setLastModifiedAt(
-        Timestamp.valueOf(LocalDateTime.now()));
+
+        // Database timestamps
+        Timestamp now = Timestamp.valueOf(LocalDateTime.now());
+        article.setCreatedAt(now);
+        article.setLastModifiedAt(now);
+
         return article;
     }
 }

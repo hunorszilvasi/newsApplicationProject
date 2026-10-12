@@ -18,12 +18,16 @@ public class DatabaseManager {
                 CREATE TABLE IF NOT EXISTS articles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     title TEXT NOT NULL,
+                    description TEXT,
                     author TEXT,
+                    publisher TEXT,
                     source TEXT,
                     url TEXT UNIQUE,
                     publish_date TIMESTAMP,
                     created_at TIMESTAMP,
-                    last_modified_at TIMESTAMP
+                    last_modified_at TIMESTAMP,
+                    language TEXT,
+                    cover_image TEXT
                 );
                 """;
 
@@ -34,7 +38,25 @@ public class DatabaseManager {
             System.out.println("Database initialized successfully.");
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println(
+                    "Database initialization failed: " + e.getMessage()
+            );
+        }
+    }
+    
+    public static boolean clearDatabase() {
+        String sql = "DELETE FROM articles";
+
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            stmt.executeUpdate(sql);
+            System.out.println("Database cleared successfully.");
+            return true;
+
+        } catch (SQLException e) {
+            System.err.println("Error clearing database: " + e.getMessage());
+            return false;
         }
     }
 }
