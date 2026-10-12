@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.awt.Image;
 import javax.swing.JButton;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.awt.GridLayout;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
 
@@ -123,6 +126,10 @@ public class NewsFrame extends JFrame {
         coverImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         coverImageLabel.setVerticalAlignment(SwingConstants.CENTER);
         coverImageLabel.setPreferredSize(new Dimension(300, 200));
+        
+        // ADD gomb
+        JButton addButton = new JButton("Add");
+        addButton.addActionListener(e -> addArticle());
         
         // Refresh Gomb
         // Loading animation
@@ -393,6 +400,7 @@ public class NewsFrame extends JFrame {
         JTextField searchField = new JTextField(20);
         JButton searchButton = new JButton("Search");
         
+        topPanel.add(addButton);
         topPanel.add(clearDbButton);
         topPanel.add(loadingLabel);
         topPanel.add(searchField);
@@ -459,6 +467,185 @@ public class NewsFrame extends JFrame {
         setVisible(true);
         
         }    
+    
+    // ADD funkcio / panel
+    private void addArticle() {
+        // Create input fields
+        JTextField titleField = new JTextField("Title", 25);
+        JTextField sourceField = new JTextField("Source", 25);
+        JTextField urlField = new JTextField("https://www.example.com", 25);
+        JTextField authorField = new JTextField("Author", 25);
+        JTextField publisherField = new JTextField("Publisher", 25);
+        JTextField publishDateField = new JTextField("2026-10-10 10:00:00", 25);
+        JTextField languageField = new JTextField("HU", 25);
+        JTextField coverImageField = new JTextField("images/asd.png", 25);
+
+        JTextArea descriptionField = new JTextArea("Description", 4, 25);
+        descriptionField.setLineWrap(true);
+        descriptionField.setWrapStyleWord(true);
+
+        // Build the form
+        JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
+
+        panel.add(new JLabel("Title *:"));
+        panel.add(titleField);
+
+        panel.add(new JLabel("Source *:"));
+        panel.add(sourceField);
+
+        panel.add(new JLabel("URL *:"));
+        panel.add(urlField);
+
+        panel.add(new JLabel("Author:"));
+        panel.add(authorField);
+
+        panel.add(new JLabel("Publisher:"));
+        panel.add(publisherField);
+
+        panel.add(new JLabel("Publish Date:"));
+        panel.add(publishDateField);
+
+        panel.add(new JLabel("Language:"));
+        panel.add(languageField);
+
+        panel.add(new JLabel("Cover Image URL:"));
+        panel.add(coverImageField);
+
+        panel.add(new JLabel("Description:"));
+        panel.add(new JScrollPane(descriptionField));
+
+        // Display the form
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                panel,
+                "Add Article",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        // Stop if the user cancels
+        if (result != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        // beviteli adatok
+        String title = titleField.getText().trim();
+        String source = sourceField.getText().trim();
+        String url = urlField.getText().trim();
+
+        if (title.isEmpty() || source.isEmpty() || url.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Title, Source and URL are required.",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        // Validate URL
+        try {
+            java.net.URI uri = new java.net.URI(url);
+
+            if (uri.getHost() == null
+                    || !("http".equalsIgnoreCase(uri.getScheme())
+                    || "https".equalsIgnoreCase(uri.getScheme()))) {
+                // ha az url nem jo, jelezze kulon ablakba
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please enter a valid HTTP or HTTPS URL.",
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+        } catch (java.net.URISyntaxException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "The URL format is invalid.",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        // Parse the publication date if provided
+        Timestamp publishDate = null;
+        String publishDateText = publishDateField.getText().trim();
+
+        if (!publishDateText.isEmpty()) {
+            try {
+                publishDate = Timestamp.valueOf(publishDateText);
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Invalid date format.\n"
+                        + "Use: yyyy-MM-dd HH:mm:ss\n"
+                        + "Example: 2026-10-12 14:30:00",
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+        }
+
+        // Set timestamps
+        Timestamp now = Timestamp.valueOf(LocalDateTime.now());
+
+        // letrehozzu kaz articlet a bemeneti adatokbol
+        Article article = new Article();
+
+        article.setTitle(title);
+        article.setSource(source);
+        article.setUrl(url);
+        article.setAuthor(authorField.getText().trim());
+        article.setPublisher(publisherField.getText().trim());
+        article.setDescription(descriptionField.getText().trim());
+        article.setPublishDate(publishDate);
+        article.setCreatedAt(now);
+        article.setLastModifiedAt(now);
+
+        String language = languageField.getText().trim();
+        article.setLanguage(language.isEmpty() ? "HU" : language);
+
+        String coverImage = coverImageField.getText().trim();
+        article.setCoverImage(coverImage.isEmpty() ? null : coverImage);
+
+        // mentsuk le az uj articlet a DB-be
+        ArticleDao articleDao = new ArticleDao();
+        int saved = articleDao.save(article);
+
+        if (saved == 1) {
+            // ujratoltes ha sikerult
+            loadArticles();
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Article added successfully!",
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+
+        } else if (saved == 0) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "An article with this URL already exists.",
+                    "Duplicate Article",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+        } else {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to save the article. Check the console for details.",
+                    "Database Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+    
+    
     // articlek betoltese a guiba
     private void loadArticles() {
         model.setRowCount(0);
