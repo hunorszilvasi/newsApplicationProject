@@ -608,7 +608,7 @@ public class NewsFrame extends JFrame {
         JTextField publisherField = new JTextField("Publisher", 25);
         JTextField publishDateField = new JTextField("2026-10-10 10:00:00", 25);
         JTextField languageField = new JTextField("HU", 25);
-        JTextField coverImageField = new JTextField("images/asd.png", 25);
+        JTextField coverImageField = new JTextField("images/default.png", 25);
 
         JTextArea descriptionField = new JTextArea("Description", 4, 25);
         descriptionField.setLineWrap(true);

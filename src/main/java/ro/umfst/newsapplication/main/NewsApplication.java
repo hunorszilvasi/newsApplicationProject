@@ -11,6 +11,9 @@ import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.SwingUtilities;
+import ro.umfst.newsapplication.dao.DatabaseManager;
+import ro.umfst.newsapplication.ui.NewsFrame;
 
 import java.util.List;
 /**
@@ -20,10 +23,8 @@ import java.util.List;
 public class NewsApplication {
 
     public static void main(String[] args) {
-        RssReader reader = new RssReader();
-        reader.testFeed();
-        new NewsFrame();
-  
-        
+        // Create the tables first, then show the saved news without waiting for the network
+        DatabaseManager.initializeDatabase();
+        SwingUtilities.invokeLater(NewsFrame::new); // creates it on a swing thread
     }
 }
