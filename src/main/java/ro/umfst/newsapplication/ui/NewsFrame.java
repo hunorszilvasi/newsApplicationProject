@@ -38,7 +38,6 @@ public class NewsFrame extends JFrame {
     private JLabel publisherLabel;
     private JLabel dateLabel;
     private JLabel coverImageLabel;
-    private JLabel idLabel;
     private JLabel urlLabel;
     private JLabel createdAtLabel;
     private JLabel lastModifiedAtLabel;
@@ -121,10 +120,11 @@ public class NewsFrame extends JFrame {
                 int modelRow = table.convertRowIndexToModel(row);
                 boolean isRead = Boolean.TRUE.equals(model.getValueAt(modelRow, 12));
 
-                if (isRead) {
+                // Keep the normal selection colors on the selected row
+                if (isRead && !isSelected) {
                     // Set color of the text
                     component.setForeground(new java.awt.Color(190, 190, 190));
-                } else {
+                } else if (!isSelected) {
                     component.setForeground(table.getForeground());
                 }
 
@@ -231,15 +231,18 @@ public class NewsFrame extends JFrame {
             );
             
             if (result == JOptionPane.YES_OPTION){
-                List<Integer> selectedRowIDs = new ArrayList<>();
+                // Collect the keys first, because deleting changes the table rows
+                List<String[]> selectedKeys = new ArrayList<>();
                 for (int viewRow : rows) {
                     int modelRow = table.convertRowIndexToModel(viewRow);
-                    int id = (Integer) model.getValueAt(modelRow, 0);
-                    selectedRowIDs.add(id);
+                    selectedKeys.add(new String[]{
+                        (String) model.getValueAt(modelRow, 2), // source
+                        (String) model.getValueAt(modelRow, 6)  // url
+                    });
                 }
                 ArticleDao daoForDelete = new ArticleDao();
-                for(int id : selectedRowIDs){
-                    daoForDelete.deleteArticle(id);
+                for (String[] key : selectedKeys) {
+                    daoForDelete.deleteArticle(key[0], key[1]);
                 }
                 loadArticles();
                 clearArticleDetails();
@@ -298,6 +301,10 @@ public class NewsFrame extends JFrame {
  
             // The table can be sorted, so convert the view row to the model row
             int row = table.convertRowIndexToModel(table.getSelectedRow());
+
+            // The key BEFORE editing: source and url are the primary key and can be changed
+            String oldSource = (String) model.getValueAt(row, 2);
+            String oldUrl = (String) model.getValueAt(row, 6);
  
             // Turns a table cell into text; a NULL cell becomes an empty string, not "null"
             java.util.function.Function<Object, String> text =
@@ -423,10 +430,9 @@ public class NewsFrame extends JFrame {
                 );
             }
  
-            // Build the updated article; the ID and creation date stay unchanged
+            // Build the updated article; the creation date stays unchanged
             Article article = new Article();
  
-            article.setId((Integer) model.getValueAt(row, 0));
             article.setTitle(title);
             article.setSource(source);
             article.setUrl(url);
@@ -446,41 +452,43 @@ public class NewsFrame extends JFrame {
                     Timestamp.valueOf(LocalDateTime.now())
             );
  
-            try {
-                dao.updateArticle(article);
- 
-                // Reloading the gui
-                loadArticles();
- 
-                // Find the updated article in the table and select it
-                // updating the right panel after edit
-                for (int i = 0; i < model.getRowCount(); i++) {
-                    int currentId = (Integer) model.getValueAt(i, 0);
- 
-                    if (currentId == article.getId()) {
-                        int viewRow1 = table.convertRowIndexToView(i);
- 
-                        if (viewRow1 != -1) {
-                            table.setRowSelectionInterval(viewRow1, viewRow1);
-                        }
- 
-                        // Refresh the right-side details panel
-                        showArticleDetails(i);
-                        break;
-                    }
-                }
- 
+            // Save; fails if the new (source, url) already belongs to another article
+            if (!dao.updateArticle(article, oldSource, oldUrl)) {
                 JOptionPane.showMessageDialog(
-                    this,
-                    "Article updated successfully!"
+                        this,
+                        "Could not save the changes.\n"
+                        + "Another article may already use this source and URL.",
+                        "Database Error",
+                        JOptionPane.ERROR_MESSAGE
                 );
- 
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(
-                    this,
-                    "Error updating article: " + ex.getMessage()
-                );
+                return;
             }
+
+            // Reloading the gui
+            loadArticles();
+
+            // Find the updated article by its new key and select it
+            for (int i = 0; i < model.getRowCount(); i++) {
+                boolean sameKey = source.equals(model.getValueAt(i, 2))
+                        && url.equals(model.getValueAt(i, 6));
+
+                if (sameKey) {
+                    int viewRow1 = table.convertRowIndexToView(i);
+
+                    if (viewRow1 != -1) {
+                        table.setRowSelectionInterval(viewRow1, viewRow1);
+                    }
+
+                    // Refresh the right-side details panel
+                    showArticleDetails(i);
+                    break;
+                }
+            }
+
+            JOptionPane.showMessageDialog(
+                this,
+                "Article updated successfully!"
+            );
         });
         
         
@@ -760,7 +768,7 @@ public class NewsFrame extends JFrame {
         } else if (saved == 0) {
             JOptionPane.showMessageDialog(
                     this,
-                    "An article with this URL already exists.",
+                    "An article with this source and URL already exists.",
                     "Duplicate Article",
                     JOptionPane.WARNING_MESSAGE
             );
@@ -876,7 +884,6 @@ public class NewsFrame extends JFrame {
         authorLabel = new JLabel("Author: -");
         publisherLabel = new JLabel("Publisher: -");
         dateLabel = new JLabel("Published: -");
-        idLabel = new JLabel("ID: -");
         urlLabel = new JLabel("URL: -");
         createdAtLabel = new JLabel("Created At: -");
         lastModifiedAtLabel = new JLabel("Last Modified At: -");
@@ -888,7 +895,6 @@ public class NewsFrame extends JFrame {
         informationPanel.add(authorLabel);
         informationPanel.add(publisherLabel);
         informationPanel.add(dateLabel);
-        informationPanel.add(idLabel);
         informationPanel.add(urlLabel);
         informationPanel.add(createdAtLabel);
         informationPanel.add(lastModifiedAtLabel);
@@ -993,9 +999,6 @@ public class NewsFrame extends JFrame {
         dateLabel.setText(
             "Published: " + String.valueOf(model.getValueAt(row, 7))
         );
-        idLabel.setText(
-            "ID: " + String.valueOf(model.getValueAt(row, 0))
-        );
 
         urlLabel.setText(
             "URL: " + String.valueOf(model.getValueAt(row, 6))
@@ -1036,7 +1039,6 @@ public class NewsFrame extends JFrame {
         authorLabel.setText("Author: ");
         publisherLabel.setText("Publisher: ");
         dateLabel.setText("Published: ");
-        idLabel.setText("ID: ");
         urlLabel.setText("URL: ");
         createdAtLabel.setText("Created At: ");
         lastModifiedAtLabel.setText("Last Modified At: ");

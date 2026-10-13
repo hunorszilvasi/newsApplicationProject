@@ -56,7 +56,6 @@ public class ArticleDao {
             while (rs.next()) {
                 Article article = new Article();
 
-                article.setId(rs.getInt("id"));
                 article.setTitle(rs.getString("title"));
                 article.setDescription(rs.getString("description"));
                 article.setAuthor(rs.getString("author"));
@@ -79,22 +78,26 @@ public class ArticleDao {
 
         return articles;
     }
-    // Deleting the article by ID
-    public void deleteArticle(int id){
-        String sql = "DELETE FROM articles WHERE id = ?";
-        try(Connection conn = DatabaseManager.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql)){    
-            pstmt.setInt(1, id);
-            pstmt.executeUpdate();
-            System.out.println("Article deleted successfully, id: " + id);
-            
-        } catch(SQLException e){
-            e.printStackTrace();
+    // Deleting an article by its composite key
+    public boolean deleteArticle(String source, String url) {
+        String sql = "DELETE FROM articles WHERE source = ? AND url = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, source);
+            pstmt.setString(2, url);
+
+            return pstmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println("Failed to delete article: " + e.getMessage());
+            return false;
         }
     }
-    
-    // Article update
-    public void updateArticle(Article article) {
+
+    // Article update; oldSource and oldUrl are the key BEFORE editing
+    public boolean updateArticle(Article article, String oldSource, String oldUrl) {
 
         String sql = """
                 UPDATE articles
@@ -109,7 +112,7 @@ public class ArticleDao {
                     last_modified_at = ?,
                     language = ?,
                     cover_image = ?
-                WHERE id = ?
+                WHERE source = ? AND url = ?
                 """;
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -126,18 +129,15 @@ public class ArticleDao {
             pstmt.setTimestamp(9, article.getLastModifiedAt());
             pstmt.setString(10, article.getLanguage());
             pstmt.setString(11, article.getCoverImage());
-            pstmt.setInt(12, article.getId());
+            pstmt.setString(12, oldSource);
+            pstmt.setString(13, oldUrl);
 
-            int rowsUpdated = pstmt.executeUpdate();
-
-            if (rowsUpdated > 0) {
-                System.out.println("Article updated successfully.");
-            } else {
-                System.out.println("No article found with the specified ID.");
-            }
+            return pstmt.executeUpdate() > 0;
 
         } catch (SQLException e) {
+            // For example: the new (source, url) already belongs to another article
             System.err.println("Failed to update article: " + e.getMessage());
+            return false;
         }
     }
     // Search bar
@@ -163,7 +163,6 @@ public class ArticleDao {
                 while (rs.next()) {
                     Article article = new Article();
 
-                    article.setId(rs.getInt("id"));
                     article.setTitle(rs.getString("title"));
                     article.setDescription(rs.getString("description"));
                     article.setAuthor(rs.getString("author"));

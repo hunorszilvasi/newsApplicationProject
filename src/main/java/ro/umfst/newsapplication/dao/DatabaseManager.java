@@ -1,10 +1,9 @@
 package ro.umfst.newsapplication.dao;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 
 public class DatabaseManager {
 
@@ -13,23 +12,26 @@ public class DatabaseManager {
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL);
     }
+
     // creating the database
     public static void initializeDatabase() {
-        
+
+        // SQLite prompt
         String sql = """
                 CREATE TABLE IF NOT EXISTS articles (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     title TEXT NOT NULL,
                     description TEXT,
                     author TEXT,
                     publisher TEXT,
-                    source TEXT,
-                    url TEXT UNIQUE,
+                    source TEXT NOT NULL,
+                    url TEXT NOT NULL,
                     publish_date TIMESTAMP,
                     created_at TIMESTAMP,
                     last_modified_at TIMESTAMP,
                     language TEXT,
-                    cover_image TEXT
+                    cover_image TEXT,
+                    is_read INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (source, url)
                 );
                 """;
 
@@ -37,15 +39,15 @@ public class DatabaseManager {
              Statement stmt = conn.createStatement()) {
 
             stmt.execute(sql);
-            addReadColumnIfMissing(conn);
             System.out.println("Database initialized successfully.");
-        // sql exception
+
         } catch (SQLException e) {
             System.err.println(
                     "Database initialization failed: " + e.getMessage()
             );
         }
     }
+
     // delete database
     public static boolean clearDatabase() {
         String sql = "DELETE FROM articles";
@@ -60,35 +62,6 @@ public class DatabaseManager {
         } catch (SQLException e) {
             System.err.println("Error clearing database: " + e.getMessage());
             return false;
-        }
-    }
-    
-    // isRead function
-    private static void addReadColumnIfMissing(Connection conn)
-            throws SQLException {
-
-        boolean columnExists = false;
-
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("PRAGMA table_info(articles)")) {
-
-            while (rs.next()) {
-                if ("is_read".equals(rs.getString("name"))) {
-                    columnExists = true;
-                    break;
-                }
-            }
-        }
-
-        if (!columnExists) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("""
-                    ALTER TABLE articles
-                    ADD COLUMN is_read INTEGER NOT NULL DEFAULT 0
-                """);
-
-                System.out.println("Added is_read column.");
-            }
         }
     }
 }
