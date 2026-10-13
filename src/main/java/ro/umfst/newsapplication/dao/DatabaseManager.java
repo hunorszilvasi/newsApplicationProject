@@ -11,7 +11,7 @@ public class DatabaseManager {
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL);
     }
-    // adatbazis letrehozas
+    // creating the database
     public static void initializeDatabase() {
         
         String sql = """
@@ -36,14 +36,14 @@ public class DatabaseManager {
 
             stmt.execute(sql);
             System.out.println("Database initialized successfully.");
-        // sql exception kezeles
+        // sql exception
         } catch (SQLException e) {
             System.err.println(
                     "Database initialization failed: " + e.getMessage()
             );
         }
     }
-    // adatbazis teljes torlese
+    // delete database
     public static boolean clearDatabase() {
         String sql = "DELETE FROM articles";
 

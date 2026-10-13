@@ -9,7 +9,7 @@ public class ImageExtractor {
 
     public static String extractImage(SyndEntry entry) {
 
-        // kep kinyerese a cikkbol rss
+        // Extracting the image from the RSS feed
         if (entry.getDescription() != null) {
             String html = entry.getDescription().getValue();
 
@@ -25,7 +25,7 @@ public class ImageExtractor {
             }
         }
 
-        // 2. No image was found.
+        // 2 No image was found
         return "images/asd.png";
     }
 }

@@ -31,7 +31,7 @@ import java.awt.BorderLayout;
 
 public class NewsFrame extends JFrame {
     private DefaultTableModel model;
-    // attributumok
+    // attributes
     private JLabel titleLabel;
     private JLabel sourceLabel;
     private JLabel authorLabel;
@@ -75,7 +75,7 @@ public class NewsFrame extends JFrame {
             },
             0
     ) {
-        // ne lehessen beleirni a cellakba
+        // Locking the cells
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
@@ -121,17 +121,17 @@ public class NewsFrame extends JFrame {
 
         table.setAutoCreateRowSorter(true);
         
-        // kep
+        // Image
         coverImageLabel = new JLabel("Select an article to view its image");
         coverImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         coverImageLabel.setVerticalAlignment(SwingConstants.CENTER);
         coverImageLabel.setPreferredSize(new Dimension(300, 200));
         
-        // ADD gomb
+        // ADD button
         JButton addButton = new JButton("Add");
         addButton.addActionListener(e -> addArticle());
         
-        // Refresh Gomb
+        // Refresh button
         // Loading animation
         ImageIcon originalIcon =
         new ImageIcon(getClass().getResource("/loading.gif"));
@@ -274,12 +274,12 @@ public class NewsFrame extends JFrame {
                     options[0]
             );
 
-            // Cancel vagy close
+            // Cancel or close
             if (choice == JOptionPane.CLOSED_OPTION) {
                 return;
             }
 
-            // sor alakitas
+            // Row 
             int viewRow = table.getSelectedRow();
             int row = table.convertRowIndexToModel(viewRow);
 
@@ -359,7 +359,7 @@ public class NewsFrame extends JFrame {
             try {
                 dao.updateArticle(article);
 
-                // ujratolteni 
+                // Reloading the gui
                 loadArticles();
 
                 // Find the updated article in the table and select it
@@ -433,7 +433,7 @@ public class NewsFrame extends JFrame {
         }
         });
         
-        // Ketto paneles view (gmail szeru)
+        // 2 sided panel view (Gmail look)
         JScrollPane tableScrollPane = new JScrollPane(table);
 
         JPanel leftPanel = new JPanel(new BorderLayout());
@@ -468,7 +468,7 @@ public class NewsFrame extends JFrame {
         
         }    
     
-    // ADD funkcio / panel
+    // ADD function + panel
     private void addArticle() {
         // Create input fields
         JTextField titleField = new JTextField("Title", 25);
@@ -528,7 +528,7 @@ public class NewsFrame extends JFrame {
             return;
         }
 
-        // beviteli adatok
+        // Extracting the user inputs
         String title = titleField.getText().trim();
         String source = sourceField.getText().trim();
         String url = urlField.getText().trim();
@@ -593,7 +593,7 @@ public class NewsFrame extends JFrame {
         // Set timestamps
         Timestamp now = Timestamp.valueOf(LocalDateTime.now());
 
-        // letrehozzu kaz articlet a bemeneti adatokbol
+        // Creating the article with the input data
         Article article = new Article();
 
         article.setTitle(title);
@@ -612,12 +612,12 @@ public class NewsFrame extends JFrame {
         String coverImage = coverImageField.getText().trim();
         article.setCoverImage(coverImage.isEmpty() ? null : coverImage);
 
-        // mentsuk le az uj articlet a DB-be
+        // Saving the new article to the DB
         ArticleDao articleDao = new ArticleDao();
         int saved = articleDao.save(article);
 
         if (saved == 1) {
-            // ujratoltes ha sikerult
+            // Reloading the GUI if succeed
             loadArticles();
 
             JOptionPane.showMessageDialog(
@@ -646,13 +646,13 @@ public class NewsFrame extends JFrame {
     }
     
     
-    // articlek betoltese a guiba
+    // Loading in the articles in the GUI
     private void loadArticles() {
         model.setRowCount(0);
 
         ArticleDao dao = new ArticleDao();
         List<Article> articles = dao.findAll();
-        articles.sort(new ArticleTitleComparator()); // ABC sorrendbe comparatorral
+        articles.sort(new ArticleTitleComparator()); // ABC order comparator
 
         for (Article article : articles) {
             model.addRow(new Object[]{
@@ -671,7 +671,7 @@ public class NewsFrame extends JFrame {
             });
         }
     }
-    // cover image betoltes
+    // cover image load
     private void displayCoverImage(String imagePath) {
         if (imagePath == null || imagePath.isBlank()) {
             coverImageLabel.setIcon(null);
@@ -723,7 +723,7 @@ public class NewsFrame extends JFrame {
             ex.printStackTrace();
         }
     }
-    // jobb oldali panel szerkezete
+    // Right sided panel 
     private JPanel createDetailsPanel() {
 
         JPanel detailsPanel = new JPanel(new BorderLayout(10, 10));
@@ -818,7 +818,7 @@ public class NewsFrame extends JFrame {
                     );
                     return;
                 }
-                // megnyitani a browsert
+                // opening the browser
                 java.awt.Desktop.getDesktop().browse(
                         new java.net.URI(selectedArticleUrl)
                 );
@@ -837,7 +837,7 @@ public class NewsFrame extends JFrame {
 
         return detailsPanel;
     }
-    // jobb oldali panel feltoltese
+    // Loading in the right sided panel 
     private void showArticleDetails(int row) {
         if (row < 0) {
             return;
@@ -897,7 +897,7 @@ public class NewsFrame extends JFrame {
         String imagePath = String.valueOf(model.getValueAt(row, 11));
         displayCoverImage(imagePath);
     }
-    // a jobb oldali panel torlese (pl delete eseten)
+    // Deleting the right sided panel (only in GUI)
     private void clearArticleDetails() {
         // article details
         titleLabel.setText("");

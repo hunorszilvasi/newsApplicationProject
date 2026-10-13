@@ -10,7 +10,7 @@ import ro.umfst.newsapplication.model.RssConfig;
 import ro.umfst.newsapplication.model.RssSource;
 
 public class RSSSourceLoader {
-    // rss betoltese a json filebol
+    // Loading RSS from the JSON file
     public List<RssSource> loadSources() {
 
         Gson gson = new Gson();

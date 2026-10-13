@@ -9,7 +9,7 @@ package ro.umfst.newsapplication.model;
  * @author hunorszilvasi
  */
 public class RssSource {
-    // igy nez ki egy json cikk
+    // JSON article look
     private String name;
     private String url;
     private String language;

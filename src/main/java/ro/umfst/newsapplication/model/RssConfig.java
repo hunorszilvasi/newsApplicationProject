@@ -2,7 +2,7 @@ package ro.umfst.newsapplication.model;
 
 import java.util.List;
 
-// Rss cikkek 
+// Rss articles
 public class RssConfig {
 
     private List<RssSource> rssSources;

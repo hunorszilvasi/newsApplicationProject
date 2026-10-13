@@ -24,9 +24,9 @@ public class RssReader {
 
     private static final Logger LOGGER = Logger.getLogger(RssReader.class.getName());
     RSSSourceLoader loader = new RSSSourceLoader(); 
-    List<RssSource> sources = loader.loadSources(); // betoltsuk a sourceokat
+    List<RssSource> sources = loader.loadSources(); // Loading in the sources
      
-    public void testFeed() { // letolteni az adatokat rss feedbol
+    public void testFeed() { // Requesting the data from the RSS feed
 
         try {
             DatabaseManager.initializeDatabase();
@@ -45,7 +45,7 @@ public class RssReader {
 
             try {
 
-                // http statusz kod mielott lekerjuk az rss feedet
+                // Checking the http satus code before request
                 int statusCode = HttpHelper.getStatusCode(source.getUrl());
 
                 if (statusCode != HttpURLConnection.HTTP_OK) {
@@ -68,7 +68,7 @@ public class RssReader {
                     Article article = toArticle(entry, source);
                     article.setSource(source.getName());
                     
-                    // adatbazisba mentes
+                    // Saving to the DB
                     int result = dao.save(article);
 
                     if (result > 0) {
@@ -99,7 +99,7 @@ public class RssReader {
 
     }
     
-    // kezelheto article formatumba SyndEntry-bol
+    // Creating article from the requested RSS FEED SyndEntry
     private Article toArticle(SyndEntry entry, RssSource source) {
         Article article = new Article();
 

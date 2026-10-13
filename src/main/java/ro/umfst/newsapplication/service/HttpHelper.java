@@ -5,7 +5,7 @@ import java.net.URL;
 import java.io.IOException;
 
 public class HttpHelper {
-    // http status kod ellenorzes
+    // Checking the HTTP status
     public static int getStatusCode(String urlAddress) {
 
         HttpURLConnection connection = null;
