@@ -71,7 +71,8 @@ public class NewsFrame extends JFrame {
                 "Created At",
                 "Last Modified",
                 "Language",
-                "Cover Image"
+                "Cover Image",
+                "Is Read"
             },
             0
     ) {
@@ -95,14 +96,46 @@ public class NewsFrame extends JFrame {
                 article.getCreatedAt(),
                 article.getLastModifiedAt(),
                 article.getLanguage(),
-                article.getCoverImage()
+                article.getCoverImage(),
+                article.isRead()
             });
         }
         JTable table = new JTable(model);
+        
+        // Text highlighter after marked as read
+        table.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+
+            @Override
+            public java.awt.Component getTableCellRendererComponent(
+                    JTable table,
+                    Object value,
+                    boolean isSelected,
+                    boolean hasFocus,
+                    int row,
+                    int column) {
+
+                java.awt.Component component =
+                        super.getTableCellRendererComponent(
+                                table, value, isSelected, hasFocus, row, column);
+
+                int modelRow = table.convertRowIndexToModel(row);
+                boolean isRead = Boolean.TRUE.equals(model.getValueAt(modelRow, 12));
+
+                if (isRead) {
+                    // Set color of the text
+                    component.setForeground(new java.awt.Color(190, 190, 190));
+                } else {
+                    component.setForeground(table.getForeground());
+                }
+
+                return component;
+            }
+        });
+        
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoCreateRowSorter(true);
 
-        // Rejtett oszlopok
+        // Hidden fields
         String[] hiddenColumns = {
             "ID",
             "Author",
@@ -112,7 +145,8 @@ public class NewsFrame extends JFrame {
             "Created At",
             "Last Modified",
             "Language",
-            "Cover Image"
+            "Cover Image",
+            "Is Read"
         };
 
         for (String columnName : hiddenColumns) {
@@ -136,7 +170,7 @@ public class NewsFrame extends JFrame {
         ImageIcon originalIcon =
         new ImageIcon(getClass().getResource("/loading.gif"));
         
-        Image scaledImage = // loading gif meretezese
+        Image scaledImage = // Scale the loading GIF
         originalIcon.getImage().getScaledInstance(
                 32, 32, Image.SCALE_DEFAULT);
 
@@ -198,8 +232,9 @@ public class NewsFrame extends JFrame {
             
             if (result == JOptionPane.YES_OPTION){
                 List<Integer> selectedRowIDs = new ArrayList<>();
-                for(int row : rows){
-                    int id = (Integer) model.getValueAt(row, 0);
+                for (int viewRow : rows) {
+                    int modelRow = table.convertRowIndexToModel(viewRow);
+                    int id = (Integer) model.getValueAt(modelRow, 0);
                     selectedRowIDs.add(id);
                 }
                 ArticleDao daoForDelete = new ArticleDao();
@@ -247,11 +282,11 @@ public class NewsFrame extends JFrame {
             }
         });
         
-        // Edit button
+        // Edit button: opens a form with all article fields
         JButton editButton = new JButton("Edit");
-
+ 
         editButton.addActionListener(e -> {
-
+ 
             // Check if exactly one article is selected
             if (table.getSelectedRowCount() != 1) {
                 JOptionPane.showMessageDialog(
@@ -260,131 +295,186 @@ public class NewsFrame extends JFrame {
                 );
                 return;
             }
-
-            String[] options = {"Title", "Author"};
-
-            int choice = JOptionPane.showOptionDialog(
-                    this,
-                    "What do you want to edit?",
-                    "Edit Article",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    options,
-                    options[0]
-            );
-
-            // Cancel or close
-            if (choice == JOptionPane.CLOSED_OPTION) {
-                return;
+ 
+            // The table can be sorted, so convert the view row to the model row
+            int row = table.convertRowIndexToModel(table.getSelectedRow());
+ 
+            // Turns a table cell into text; a NULL cell becomes an empty string, not "null"
+            java.util.function.Function<Object, String> text =
+                    value -> value == null ? "" : value.toString();
+ 
+            // Form fields, pre-filled with the current values of the selected article
+            JTextField titleField = new JTextField(text.apply(model.getValueAt(row, 1)), 30);
+            JTextField sourceField = new JTextField(text.apply(model.getValueAt(row, 2)), 30);
+            JTextField urlField = new JTextField(text.apply(model.getValueAt(row, 6)), 30);
+            JTextField authorField = new JTextField(text.apply(model.getValueAt(row, 3)), 30);
+            JTextField publisherField = new JTextField(text.apply(model.getValueAt(row, 5)), 30);
+            JTextField coverImageField = new JTextField(text.apply(model.getValueAt(row, 11)), 30);
+ 
+            Object publishValue = model.getValueAt(row, 7);
+            String publishText = publishValue instanceof Timestamp ts
+                    ? ts.toLocalDateTime().format(
+                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                    : "";
+            JTextField publishDateField = new JTextField(publishText, 30);
+ 
+            // Language is RO or HU; any other stored value is kept as an extra choice
+            JComboBox<String> languageBox = new JComboBox<>(new String[]{"RO", "HU"});
+            String language = text.apply(model.getValueAt(row, 10));
+            if (language.equalsIgnoreCase("RO") || language.equalsIgnoreCase("HU")) {
+                languageBox.setSelectedItem(language.toUpperCase());
+            } else if (!language.isBlank()) {
+                languageBox.addItem(language);
+                languageBox.setSelectedItem(language);
             }
-
-            // Row 
-            int viewRow = table.getSelectedRow();
-            int row = table.convertRowIndexToModel(viewRow);
-
-            // Read article data using the current model column order
+ 
+            JTextArea descriptionArea = new JTextArea(text.apply(model.getValueAt(row, 4)), 8, 30);
+            descriptionArea.setLineWrap(true);
+            descriptionArea.setWrapStyleWord(true);
+ 
+            // Build the form: short fields on top, description fills the rest
+            JPanel fields = new JPanel(new GridLayout(0, 2, 5, 5));
+            fields.add(new JLabel("Title *:"));
+            fields.add(titleField);
+            fields.add(new JLabel("Source *:"));
+            fields.add(sourceField);
+            fields.add(new JLabel("URL *:"));
+            fields.add(urlField);
+            fields.add(new JLabel("Author:"));
+            fields.add(authorField);
+            fields.add(new JLabel("Publisher:"));
+            fields.add(publisherField);
+            fields.add(new JLabel("Publish date (yyyy-MM-dd HH:mm:ss):"));
+            fields.add(publishDateField);
+            fields.add(new JLabel("Language:"));
+            fields.add(languageBox);
+            fields.add(new JLabel("Cover image (URL or resource path):"));
+            fields.add(coverImageField);
+ 
+            JPanel descriptionPanel = new JPanel(new BorderLayout(5, 5));
+            descriptionPanel.add(new JLabel("Description:"), BorderLayout.NORTH);
+            descriptionPanel.add(new JScrollPane(descriptionArea), BorderLayout.CENTER);
+ 
+            JPanel form = new JPanel(new BorderLayout(5, 10));
+            form.add(fields, BorderLayout.NORTH);
+            form.add(descriptionPanel, BorderLayout.CENTER);
+ 
+            // Show the form again with the typed values until the input is valid or cancelled
+            Timestamp publishDate;
+            String title;
+            String source;
+            String url;
+ 
+            while (true) {
+                int result = JOptionPane.showConfirmDialog(
+                        this,
+                        form,
+                        "Edit Article",
+                        JOptionPane.OK_CANCEL_OPTION,
+                        JOptionPane.PLAIN_MESSAGE
+                );
+ 
+                // Cancel or close
+                if (result != JOptionPane.OK_OPTION) {
+                    return;
+                }
+ 
+                title = titleField.getText().trim();
+                source = sourceField.getText().trim();
+                url = urlField.getText().trim();
+                String dateText = publishDateField.getText().trim();
+                publishDate = null;
+                String error = null;
+ 
+                if (title.isEmpty() || source.isEmpty() || url.isEmpty()) {
+                    error = "Title, Source and URL are required.";
+                } else {
+                    try {
+                        java.net.URI uri = new java.net.URI(url);
+                        if (uri.getHost() == null
+                                || !("http".equalsIgnoreCase(uri.getScheme())
+                                || "https".equalsIgnoreCase(uri.getScheme()))) {
+                            error = "Please enter a valid HTTP or HTTPS URL.";
+                        }
+                    } catch (java.net.URISyntaxException ex) {
+                        error = "The URL format is invalid.";
+                    }
+                }
+ 
+                if (error == null && !dateText.isEmpty()) {
+                    try {
+                        publishDate = Timestamp.valueOf(dateText);
+                    } catch (IllegalArgumentException ex) {
+                        error = "Invalid date format.\n"
+                                + "Use: yyyy-MM-dd HH:mm:ss\n"
+                                + "Example: 2026-10-12 14:30:00";
+                    }
+                }
+ 
+                if (error == null) {
+                    break;
+                }
+ 
+                JOptionPane.showMessageDialog(
+                        this,
+                        error,
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
+            }
+ 
+            // Build the updated article; the ID and creation date stay unchanged
             Article article = new Article();
-
+ 
             article.setId((Integer) model.getValueAt(row, 0));
-            article.setTitle(String.valueOf(model.getValueAt(row, 1)));
-            article.setSource(String.valueOf(model.getValueAt(row, 2)));
-            article.setAuthor(String.valueOf(model.getValueAt(row, 3)));
-            article.setDescription(String.valueOf(model.getValueAt(row, 4)));
-            article.setPublisher(String.valueOf(model.getValueAt(row, 5)));
-            article.setUrl(String.valueOf(model.getValueAt(row, 6)));
-
-            // Convert date strings to Timestamp safely
-            Object publishDateValue = model.getValueAt(row, 7);
-            if (publishDateValue != null
-                    && !publishDateValue.toString().isBlank()
-                    && !publishDateValue.toString().equals("null")) {
-                article.setPublishDate(
-                        Timestamp.valueOf(publishDateValue.toString())
-                );
+            article.setTitle(title);
+            article.setSource(source);
+            article.setUrl(url);
+            article.setAuthor(authorField.getText().isBlank() ? null : authorField.getText().trim());
+            article.setPublisher(publisherField.getText().isBlank() ? null : publisherField.getText().trim());
+            article.setPublishDate(publishDate);
+            article.setLanguage((String) languageBox.getSelectedItem());
+            article.setCoverImage(coverImageField.getText().isBlank() ? null : coverImageField.getText().trim());
+            article.setDescription(descriptionArea.getText().trim());
+ 
+            if (model.getValueAt(row, 8) instanceof Timestamp createdAt) {
+                article.setCreatedAt(createdAt);
             }
-
-            Object createdAtValue = model.getValueAt(row, 8);
-            if (createdAtValue != null
-                    && !createdAtValue.toString().isBlank()
-                    && !createdAtValue.toString().equals("null")) {
-                article.setCreatedAt(
-                        Timestamp.valueOf(createdAtValue.toString())
-                );
-            }
-
-            article.setLanguage(
-                    String.valueOf(model.getValueAt(row, 10))
-            );
-
-            article.setCoverImage(
-                    String.valueOf(model.getValueAt(row, 11))
-            );
-
-            // Update the selected field
-            if (choice == 0) { // ha title
-
-                String newTitle = JOptionPane.showInputDialog(
-                        this,
-                        "Enter new title:",
-                        article.getTitle()
-                );
-
-                if (newTitle == null || newTitle.isBlank()) {
-                    return;
-                }
-
-                article.setTitle(newTitle.trim());
-
-            } else if (choice == 1) { // ha author
-
-                String newAuthor = JOptionPane.showInputDialog(
-                        this,
-                        "Enter new author:",
-                        article.getAuthor()
-                );
-
-                if (newAuthor == null || newAuthor.isBlank()) {
-                    return;
-                }
-
-                article.setAuthor(newAuthor.trim());
-            }
-
+ 
             // Update modification timestamp
             article.setLastModifiedAt(
                     Timestamp.valueOf(LocalDateTime.now())
             );
-
+ 
             try {
                 dao.updateArticle(article);
-
+ 
                 // Reloading the gui
                 loadArticles();
-
+ 
                 // Find the updated article in the table and select it
                 // updating the right panel after edit
                 for (int i = 0; i < model.getRowCount(); i++) {
                     int currentId = (Integer) model.getValueAt(i, 0);
-
+ 
                     if (currentId == article.getId()) {
                         int viewRow1 = table.convertRowIndexToView(i);
-
+ 
                         if (viewRow1 != -1) {
                             table.setRowSelectionInterval(viewRow1, viewRow1);
                         }
-
+ 
                         // Refresh the right-side details panel
                         showArticleDetails(i);
                         break;
                     }
                 }
-
+ 
                 JOptionPane.showMessageDialog(
                     this,
                     "Article updated successfully!"
                 );
-
+ 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(
                     this,
@@ -428,7 +518,8 @@ public class NewsFrame extends JFrame {
                 article.getCreatedAt(),
                 article.getLastModifiedAt(),
                 article.getLanguage(),
-                article.getCoverImage()
+                article.getCoverImage(),
+                article.isRead()
             });
         }
         });
@@ -455,11 +546,50 @@ public class NewsFrame extends JFrame {
         
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
+
                 int viewRow = table.getSelectedRow();
 
                 if (viewRow >= 0) {
+
                     int modelRow = table.convertRowIndexToModel(viewRow);
+
+                    // Show article details
                     showArticleDetails(modelRow);
+
+                    // Check if the article is already read
+                    boolean isRead = Boolean.TRUE.equals(
+                            model.getValueAt(modelRow, 12)
+                    );
+
+                    if (!isRead) {
+
+                        // Get the article's source and URL
+                        String source = String.valueOf(
+                                model.getValueAt(modelRow, 2)
+                        );
+
+                        String url = String.valueOf(
+                                model.getValueAt(modelRow, 6)
+                        );
+
+                        // Save the read status in the database
+                        ArticleDao articleDao = new ArticleDao();
+
+                        boolean success = articleDao.markAsRead(source, url);
+
+                        if (success) {
+
+                            // Update the table model
+                            model.setValueAt(true, modelRow, 12);
+
+                            // Refresh the table appearance
+                            table.repaint();
+
+                            System.out.println(
+                                    "Article marked as read: " + source
+                            );
+                        }
+                    }
                 }
             }
         });
@@ -550,7 +680,7 @@ public class NewsFrame extends JFrame {
             if (uri.getHost() == null
                     || !("http".equalsIgnoreCase(uri.getScheme())
                     || "https".equalsIgnoreCase(uri.getScheme()))) {
-                // ha az url nem jo, jelezze kulon ablakba
+                // Show a warning dialog if the URL is invalid
                 JOptionPane.showMessageDialog(
                         this,
                         "Please enter a valid HTTP or HTTPS URL.",
@@ -667,7 +797,8 @@ public class NewsFrame extends JFrame {
                 article.getCreatedAt(),
                 article.getLastModifiedAt(),
                 article.getLanguage(),
-                article.getCoverImage()
+                article.getCoverImage(),
+                article.isRead()
             });
         }
     }

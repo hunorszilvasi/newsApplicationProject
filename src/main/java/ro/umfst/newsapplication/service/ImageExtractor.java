@@ -26,6 +26,6 @@ public class ImageExtractor {
         }
 
         // 2 No image was found
-        return "images/asd.png";
+        return "images/default.png";
     }
 }

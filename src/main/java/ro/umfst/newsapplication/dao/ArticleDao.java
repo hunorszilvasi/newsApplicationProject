@@ -11,7 +11,7 @@ import ro.umfst.newsapplication.model.Article;
 public class ArticleDao {
 
     
-    // egy article lementese
+    // Saving an article
     public int save(Article article) {
 
         String sql = """
@@ -44,7 +44,7 @@ public class ArticleDao {
             return -1;
         }
     }
-    // Article listazasa
+    // Article listing
     public List<Article> findAll() {
         List<Article> articles = new ArrayList<>();
         String sql = "SELECT * FROM articles";
@@ -68,6 +68,7 @@ public class ArticleDao {
                 article.setLastModifiedAt(rs.getTimestamp("last_modified_at"));
                 article.setLanguage(rs.getString("language"));
                 article.setCoverImage(rs.getString("cover_image"));
+                article.setRead(rs.getInt("is_read") == 1);
 
                 articles.add(article);
             }
@@ -78,7 +79,7 @@ public class ArticleDao {
 
         return articles;
     }
-    // Article torles ID szerint
+    // Deleting the article by ID
     public void deleteArticle(int id){
         String sql = "DELETE FROM articles WHERE id = ?";
         try(Connection conn = DatabaseManager.getConnection();
@@ -92,7 +93,7 @@ public class ArticleDao {
         }
     }
     
-    // Article modositas
+    // Article update
     public void updateArticle(Article article) {
 
         String sql = """
@@ -139,7 +140,7 @@ public class ArticleDao {
             System.err.println("Failed to update article: " + e.getMessage());
         }
     }
-    // kereso bar
+    // Search bar
     public List<Article> searchByTitle(String keyword) {
 
         List<Article> articles = new ArrayList<>();
@@ -174,6 +175,7 @@ public class ArticleDao {
                     article.setLastModifiedAt(rs.getTimestamp("last_modified_at"));
                     article.setLanguage(rs.getString("language"));
                     article.setCoverImage(rs.getString("cover_image"));
+                    article.setRead(rs.getInt("is_read") == 1);
 
                     articles.add(article);
                 }
@@ -184,5 +186,28 @@ public class ArticleDao {
         }
 
         return articles;
+    }
+    // Mark the article as read
+    public boolean markAsRead(String source, String url) {
+        String sql = """
+            UPDATE articles
+            SET is_read = 1
+            WHERE source = ? AND url = ?
+        """;
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, source);
+            pstmt.setString(2, url);
+
+            return pstmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println(
+                "Failed to mark article as read: " + e.getMessage()
+            );
+            return false;
+        }
     }
 }

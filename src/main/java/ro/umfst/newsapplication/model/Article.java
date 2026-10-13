@@ -22,6 +22,7 @@ public class Article extends BaseEntity implements Identifiable{
     private String publisher;
     private String language;
     private String coverImage;
+    private boolean read;
     
     @Override
     public boolean equals(Object obj) {
@@ -158,6 +159,13 @@ public class Article extends BaseEntity implements Identifiable{
         this.coverImage = coverImage;
     }
     
+    public boolean isRead() {
+        return read;
+    }
+
+    public void setRead(boolean read) {
+        this.read = read;
+    }
     @Override
     public String toString() {
         return "Article{" + "id=" + id + ", title=" + title + ", author=" + author + ", source=" + source + ", url=" + url + ", publishDate=" + publishDate + ", createdAt=" + createdAt + ", lastModifiedAt=" + lastModifiedAt + '}';
