@@ -18,6 +18,7 @@ import java.net.URL;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.logging.Level;
+import java.net.SocketTimeoutException;
 import java.util.logging.Logger;
 
 public class RssReader {
@@ -26,8 +27,7 @@ public class RssReader {
     RSSSourceLoader loader = new RSSSourceLoader(); 
     List<RssSource> sources = loader.loadSources(); // Loading in the sources
      
-    public void testFeed() { // Requesting the data from the RSS feed
-
+    public void testFeed() {
         try {
             DatabaseManager.initializeDatabase();
         } catch (Exception e) {
@@ -40,35 +40,33 @@ public class RssReader {
         int saved = 0;
         int failed = 0;
         int skipped = 0;
-        //
+
         for (RssSource source : sources) {
+            HttpURLConnection connection = null;
 
             try {
-
-                // Checking the http satus code before request
-                int statusCode = HttpHelper.getStatusCode(source.getUrl());
+                connection = HttpHelper.openConnection(source.getUrl());
+                int statusCode = connection.getResponseCode();
 
                 if (statusCode != HttpURLConnection.HTTP_OK) {
                     LOGGER.warning(
-                            "RSS source returned HTTP status "
-                            + statusCode + ": " + source.getName()
+                            "Could not process RSS source '" + source.getName()
+                            + "': HTTP " + statusCode + " ("
+                            + HttpHelper.describeStatus(statusCode) + ")"
                     );
-
                     failed++;
                     continue;
                 }
 
-                URL url = new URL(source.getUrl());
-
-                SyndFeed feed =
-                        new SyndFeedInput().build(new XmlReader(url));
+                SyndFeed feed;
+                try (XmlReader reader = new XmlReader(connection.getInputStream())) {
+                    feed = new SyndFeedInput().build(reader);
+                }
 
                 for (SyndEntry entry : feed.getEntries()) {
-
                     Article article = toArticle(entry, source);
                     article.setSource(source.getName());
-                    
-                    // Saving to the DB
+
                     int result = dao.save(article);
 
                     if (result > 0) {
@@ -80,23 +78,42 @@ public class RssReader {
                     }
                 }
 
-            } catch (Exception e) {
+            } catch (SocketTimeoutException e) {
+                LOGGER.log(
+                        Level.WARNING,
+                        "Request timed out for RSS source: " + source.getName(),
+                        e
+                );
+                failed++;
 
+            } catch (IOException e) {
+                LOGGER.log(
+                        Level.WARNING,
+                        "Connection failed for RSS source: " + source.getName(),
+                        e
+                );
+                failed++;
+
+            } catch (Exception e) {
                 LOGGER.log(
                         Level.WARNING,
                         "Couldn't process feed: " + source.getName(),
                         e
                 );
-
                 failed++;
+
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
             }
         }
-        //
-        LOGGER.info(
-        "Saved: " + saved
-        + ", Failed: " + failed
-        + ", Skipped: " + skipped);
 
+        LOGGER.info(
+                "Saved: " + saved
+                + ", Failed: " + failed
+                + ", Skipped: " + skipped
+        );
     }
     
     // Creating article from the requested RSS FEED SyndEntry
