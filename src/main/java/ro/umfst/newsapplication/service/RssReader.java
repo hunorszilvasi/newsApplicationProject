@@ -2,7 +2,6 @@ package ro.umfst.newsapplication.service;
 
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
-import com.rometools.rome.io.FeedException;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 import ro.umfst.newsapplication.dao.ArticleDao;
@@ -11,15 +10,17 @@ import ro.umfst.newsapplication.dao.DatabaseManager;
 import ro.umfst.newsapplication.model.Article;
 import ro.umfst.newsapplication.model.RssSource;
 import java.io.IOException;
-import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.net.HttpURLConnection;
-import ro.umfst.newsapplication.service.HttpHelper;
-import java.net.URL;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.logging.Level;
 import java.net.SocketTimeoutException;
 import java.util.logging.Logger;
+/**
+ *
+ * @author hunorszilvasi
+ */
 
 public class RssReader {
 
@@ -27,33 +28,22 @@ public class RssReader {
     RSSSourceLoader loader = new RSSSourceLoader(); 
     List<RssSource> sources = loader.loadSources(); // Loading in the sources
      
-    public void testFeed() {
-        try {
-            DatabaseManager.initializeDatabase();
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Database initialization failed", e);
-            return;
-        }
-
+    public RefreshResult refreshAll() {
+        DatabaseManager.initializeDatabase();
         ArticleDao dao = new ArticleDao();
 
-        int saved = 0;
-        int failed = 0;
-        int skipped = 0;
+        int saved = 0, skipped = 0, failed = 0;
+        List<String> failedSources = new ArrayList<>();
 
         for (RssSource source : sources) {
             HttpURLConnection connection = null;
-
             try {
                 connection = HttpHelper.openConnection(source.getUrl());
                 int statusCode = connection.getResponseCode();
 
                 if (statusCode != HttpURLConnection.HTTP_OK) {
-                    LOGGER.warning(
-                            "Could not process RSS source '" + source.getName()
-                            + "': HTTP " + statusCode + " ("
-                            + HttpHelper.describeStatus(statusCode) + ")"
-                    );
+                    failedSources.add(source.getName() + " (HTTP " + statusCode + " "
+                            + HttpHelper.describeStatus(statusCode) + ")");
                     failed++;
                     continue;
                 }
@@ -68,52 +58,30 @@ public class RssReader {
                     article.setSource(source.getName());
 
                     int result = dao.save(article);
-
-                    if (result > 0) {
-                        saved++;
-                    } else if (result == 0) {
-                        skipped++;
-                    } else {
-                        failed++;
-                    }
+                    if (result > 0) saved++;
+                    else if (result == 0) skipped++;
+                    else failed++;
                 }
 
             } catch (SocketTimeoutException e) {
-                LOGGER.log(
-                        Level.WARNING,
-                        "Request timed out for RSS source: " + source.getName(),
-                        e
-                );
+                LOGGER.log(Level.WARNING, "Timeout: " + source.getName(), e);
+                failedSources.add(source.getName() + " (timeout)");
                 failed++;
-
             } catch (IOException e) {
-                LOGGER.log(
-                        Level.WARNING,
-                        "Connection failed for RSS source: " + source.getName(),
-                        e
-                );
+                LOGGER.log(Level.WARNING, "Connection failed: " + source.getName(), e);
+                failedSources.add(source.getName() + " (connection error)");
                 failed++;
-
             } catch (Exception e) {
-                LOGGER.log(
-                        Level.WARNING,
-                        "Couldn't process feed: " + source.getName(),
-                        e
-                );
+                LOGGER.log(Level.WARNING, "Invalid feed: " + source.getName(), e);
+                failedSources.add(source.getName() + " (invalid feed)");
                 failed++;
-
             } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
+                if (connection != null) connection.disconnect();
             }
         }
 
-        LOGGER.info(
-                "Saved: " + saved
-                + ", Failed: " + failed
-                + ", Skipped: " + skipped
-        );
+        LOGGER.info("Saved: " + saved + ", Skipped: " + skipped + ", Failed: " + failed);
+        return new RefreshResult(saved, skipped, failed, failedSources);
     }
     
     // Creating article from the requested RSS FEED SyndEntry

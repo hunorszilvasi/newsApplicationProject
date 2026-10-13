@@ -4,6 +4,10 @@ import com.rometools.rome.feed.synd.SyndEntry;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+/**
+ *
+ * @author hunorszilvasi
+ */
 
 public class ImageExtractor {
 

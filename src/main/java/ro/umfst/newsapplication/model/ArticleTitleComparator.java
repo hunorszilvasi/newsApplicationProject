@@ -1,6 +1,10 @@
 package ro.umfst.newsapplication.model;
 
 import java.util.Comparator;
+/**
+ *
+ * @author hunorszilvasi
+ */
 
 public class ArticleTitleComparator implements Comparator<Article> {
 

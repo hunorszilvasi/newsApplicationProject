@@ -1,5 +1,8 @@
 package ro.umfst.newsapplication.model;
-
+/**
+ *
+ * @author hunorszilvasi
+ */
 import java.util.List;
 
 // Rss articles

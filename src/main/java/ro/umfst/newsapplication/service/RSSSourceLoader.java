@@ -8,6 +8,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import ro.umfst.newsapplication.model.RssConfig;
 import ro.umfst.newsapplication.model.RssSource;
+/**
+ *
+ * @author hunorszilvasi
+ */
 
 public class RSSSourceLoader {
     // Loading RSS from the JSON file

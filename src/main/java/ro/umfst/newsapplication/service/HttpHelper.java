@@ -3,7 +3,10 @@ package ro.umfst.newsapplication.service;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-
+/**
+ *
+ * @author hunorszilvasi
+ */
 public class HttpHelper {
 
     public static HttpURLConnection openConnection(String urlAddress)

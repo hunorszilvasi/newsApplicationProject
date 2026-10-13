@@ -1,20 +1,17 @@
 package ro.umfst.newsapplication.ui;
-import ro.umfst.newsapplication.model.Article;
 import ro.umfst.newsapplication.service.RssReader;
 import ro.umfst.newsapplication.dao.*;
-import java.util.List;
 import ro.umfst.newsapplication.model.Article;
 import ro.umfst.newsapplication.model.ArticleTitleComparator;
+import ro.umfst.newsapplication.service.RefreshResult;
 
 import ro.umfst.newsapplication.dao.ArticleDao;
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
-import java.sql.Timestamp;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import java.awt.Dimension;
 import javax.swing.*;
-import java.time.LocalDateTime;
 import javax.swing.JTextField;
 import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
@@ -28,7 +25,15 @@ import java.time.LocalDateTime;
 import java.awt.GridLayout;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
-
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import javax.imageio.ImageIO;
+import ro.umfst.newsapplication.service.HttpHelper;
+/**
+ *
+ * @author hunorszilvasi
+ */
 public class NewsFrame extends JFrame {
     private DefaultTableModel model;
     // attributes
@@ -42,6 +47,8 @@ public class NewsFrame extends JFrame {
     private JLabel createdAtLabel;
     private JLabel lastModifiedAtLabel;
     private JLabel languageLabel;
+    
+    private SwingWorker<ImageIcon, Void> imageWorker;
 
     private JTextArea descriptionArea;
     private JButton openArticleButton;
@@ -165,7 +172,7 @@ public class NewsFrame extends JFrame {
         JButton addButton = new JButton("Add");
         addButton.addActionListener(e -> addArticle());
         
-        // Refresh button
+        // Refresh button +
         // Loading animation
         ImageIcon originalIcon =
         new ImageIcon(getClass().getResource("/loading.gif"));
@@ -179,37 +186,45 @@ public class NewsFrame extends JFrame {
         JLabel loadingLabel = new JLabel(loadingIcon);
         
         loadingLabel.setVisible(false);
-        //refresh
+        //refresh button
         JButton refreshButton = new JButton("Refresh");
         refreshButton.addActionListener(e -> {
 
+            refreshButton.setEnabled(false);   // prevent overlapping refreshes
             loadingLabel.setVisible(true);
 
-            SwingWorker<Void, Void> worker = new SwingWorker<>() {
+            new SwingWorker<RefreshResult, Void>() {
 
                 @Override
-                protected Void doInBackground() throws Exception {
-
-                    RssReader reader = new RssReader();
-                    reader.testFeed();
-
-                    return null;
+                protected RefreshResult doInBackground() {
+                    // Download and parse feeds in the background to keep the UI responsive
+                    return new RssReader().refreshAll();
                 }
 
                 @Override
                 protected void done() {
-
-                    loadArticles();
                     loadingLabel.setVisible(false);
+                    refreshButton.setEnabled(true);
 
-                    JOptionPane.showMessageDialog(
-                            NewsFrame.this,
-                            "Refresh completed!"
-                    );
+                    try {
+                        RefreshResult result = get();   // rethrows anything thrown in doInBackground
+                        loadArticles();
+                        showRefreshResult(result);
+
+                    } catch (java.util.concurrent.ExecutionException ex) {
+                        // e.g. rss.json missing or invalid
+                        Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                        JOptionPane.showMessageDialog(
+                                NewsFrame.this,
+                                "Refresh failed: " + cause.getMessage(),
+                                "Refresh error",
+                                JOptionPane.ERROR_MESSAGE);
+
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
-            };
-
-            worker.execute();
+            }.execute();
         });
         
         // Delete button
@@ -810,58 +825,88 @@ public class NewsFrame extends JFrame {
             });
         }
     }
-    // cover image load
+    // Cover image load
     private void displayCoverImage(String imagePath) {
+        // Discard any download still running for a previously selected article
+        if (imageWorker != null) {
+            imageWorker.cancel(true);
+        }
+
         if (imagePath == null || imagePath.isBlank()) {
             coverImageLabel.setIcon(null);
             coverImageLabel.setText("No image available");
             return;
         }
 
-        try {
-            ImageIcon imageIcon;
+        // Remote image: download in the background
+        if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+            coverImageLabel.setIcon(null);
+            coverImageLabel.setText("Loading image...");
 
-            if (imagePath.startsWith("http://")
-                    || imagePath.startsWith("https://")) {
-
-                imageIcon = new ImageIcon(new java.net.URL(imagePath));
-
-            } else {
-                java.net.URL resource =
-                        getClass().getResource("/" + imagePath);
-
-                if (resource == null) {
-                    coverImageLabel.setIcon(null);
-                    coverImageLabel.setText("Image not found");
-                    return;
+            imageWorker = new SwingWorker<>() {
+                @Override
+                protected ImageIcon doInBackground() throws Exception {
+                    HttpURLConnection connection = HttpHelper.openConnection(imagePath); // 5 s timeouts
+                    try {
+                        if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                            return null;
+                        }
+                        try (InputStream in = connection.getInputStream()) {
+                            BufferedImage image = ImageIO.read(in);
+                            if (image == null) {
+                                return null; // unsupported format
+                            }
+                            // Scale off the EDT as well
+                            return new ImageIcon(
+                                    image.getScaledInstance(280, 180, Image.SCALE_SMOOTH));
+                        }
+                    } finally {
+                        connection.disconnect();
+                    }
                 }
 
-                imageIcon = new ImageIcon(resource);
-            }
-
-            if (imageIcon.getIconWidth() <= 0
-                    || imageIcon.getIconHeight() <= 0) {
-                coverImageLabel.setIcon(null);
-                coverImageLabel.setText("Invalid image");
-                System.out.println("Could not decode image: " + imagePath);
-                return;
-            }
-
-            Image scaledImage = imageIcon.getImage().getScaledInstance(
-                    280,
-                    180,
-                    Image.SCALE_SMOOTH
-            );
-
-            coverImageLabel.setText("");
-            coverImageLabel.setIcon(new ImageIcon(scaledImage));
-
-        } catch (Exception ex) {
-            coverImageLabel.setIcon(null);
-            coverImageLabel.setText("Could not load image");
-            ex.printStackTrace();
+                @Override
+                protected void done() {
+                    if (isCancelled()) {
+                        return; // user already selected another article
+                    }
+                    try {
+                        ImageIcon icon = get();
+                        if (icon == null) {
+                            coverImageLabel.setIcon(null);
+                            coverImageLabel.setText("Could not load image");
+                        } else {
+                            coverImageLabel.setText("");
+                            coverImageLabel.setIcon(icon);
+                        }
+                    } catch (Exception ex) {
+                        coverImageLabel.setIcon(null);
+                        coverImageLabel.setText("Could not load image");
+                    }
+                }
+            };
+            imageWorker.execute();
+            return;
         }
+
+        // Local resource (e.g. images/default.png): fast, safe on the EDT
+        java.net.URL resource = getClass().getResource("/" + imagePath);
+        if (resource == null) {
+            coverImageLabel.setIcon(null);
+            coverImageLabel.setText("Image not found");
+            return;
+        }
+        ImageIcon icon = new ImageIcon(resource);
+        if (icon.getIconWidth() <= 0) {
+            coverImageLabel.setIcon(null);
+            coverImageLabel.setText("Invalid image");
+            return;
+        }
+        coverImageLabel.setText("");
+        coverImageLabel.setIcon(new ImageIcon(
+                icon.getImage().getScaledInstance(280, 180, Image.SCALE_SMOOTH)));
     }
+    
     // Right sided panel 
     private JPanel createDetailsPanel() {
 
@@ -1053,5 +1098,34 @@ public class NewsFrame extends JFrame {
         // selected article URL
         selectedArticleUrl = null;
         openArticleButton.setEnabled(false);
+    }
+    
+    private void showRefreshResult(RefreshResult r) {
+        StringBuilder message = new StringBuilder();
+        message.append("New articles: ").append(r.saved())
+               .append("\nAlready saved: ").append(r.skipped());
+
+        if (!r.failedSources().isEmpty()) {
+            message.append("\n\nFeeds that failed:");
+            for (String s : r.failedSources()) {
+                message.append("\n  - ").append(s);
+            }
+        }
+
+        int type;
+        String title;
+        if (r.allFailed()) {
+            type = JOptionPane.ERROR_MESSAGE;
+            title = "Refresh failed";
+            message.insert(0, "No feed could be loaded. Check your connection.\n\n");
+        } else if (r.failed() > 0) {
+            type = JOptionPane.WARNING_MESSAGE;
+            title = "Refresh finished with errors";
+        } else {
+            type = JOptionPane.INFORMATION_MESSAGE;
+            title = "Refresh completed";
+        }
+
+        JOptionPane.showMessageDialog(this, message.toString(), title, type);
     }
 }

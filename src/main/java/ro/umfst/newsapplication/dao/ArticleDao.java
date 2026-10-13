@@ -6,10 +6,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.sql.Timestamp;
 import ro.umfst.newsapplication.model.Article;
-public class ArticleDao {
 
+/**
+ *
+ * @author hunorszilvasi
+ */
+
+public class ArticleDao {
     
     // Saving an article
     public int save(Article article) {

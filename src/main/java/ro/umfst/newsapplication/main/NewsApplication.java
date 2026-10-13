@@ -1,21 +1,9 @@
 package ro.umfst.newsapplication.main;
 
-import ro.umfst.newsapplication.ui.NewsFrame;
-import ro.umfst.newsapplication.dao.ArticleDao;
-import ro.umfst.newsapplication.model.*;
-import ro.umfst.newsapplication.service.*;
-import java.sql.Connection;
-import java.util.List;
-import java.util.ArrayList;
-import javax.swing.JFrame;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.SwingUtilities;
 import ro.umfst.newsapplication.dao.DatabaseManager;
 import ro.umfst.newsapplication.ui.NewsFrame;
 
-import java.util.List;
 /**
  *
  * @author hunorszilvasi // MAIN
